@@ -37,7 +37,7 @@ Lab session: P1, Group-2
 | Harshitha Ambavarapu | 2023B2AD0873H | EER diagram (weak entities, specialization of USER); ER/EER to relational mapping |
 | Rudhra Koul | 2023B3AD0445H | Relational schema: keys, composite foreign keys and integrity constraints |
 | Geetanjali Dangeti Sree | 2023B4AD0609H | Design justification; application architecture and tech stack |
-| Pratyush Pranay | 2023B5AA1211H | Application workflows and hold-and-pay flow; GitHub repository, README and documents |
+| Pranay Pratyush | 2023B5AA1211H | Application workflows and hold-and-pay flow; GitHub repository, README and documents |
 
 ## Tech stack
 
