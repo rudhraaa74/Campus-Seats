@@ -2,6 +2,15 @@
 
 DBMS Course Project · Full-stack database application · Mid-Sem submission
 
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+[![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
+[![Postman](https://img.shields.io/badge/Postman-FF6C37?style=for-the-badge&logo=postman&logoColor=white)](https://www.postman.com/)
+
 > **Status: mid-sem.** Database and application design are complete. Implementation (SQL scripts, backend, front end) is the next phase. See [Progress](#progress).
 
 ## About
@@ -32,13 +41,15 @@ Lab session: P1, Group-2
 
 ## Tech stack
 
-| Layer | Technology |
-|---|---|
-| Front end | React + Tailwind CSS |
-| Backend | Node.js + Express, node-postgres (`pg`), JWT auth |
-| Database | PostgreSQL |
-| Hold timer | Redis (key TTL) |
-| Scheduler | node-cron |
+| Layer | Technology | Role |
+|---|---|---|
+| Front end | React + Tailwind CSS | Seat map, checkout with countdown, organizer dashboard |
+| Backend | Node.js + Express | REST API, JWT auth, transactions, role checks, report endpoints |
+| DB driver | node-postgres (`pg`), plain SQL | Explicit `BEGIN` / `COMMIT`, parameterised queries |
+| Database | PostgreSQL | Schema, constraints, triggers, views, `EXCLUDE` and partial indexes |
+| Timer / cache | Redis (key TTL) | 5-minute hold countdown and expiry signal |
+| Scheduler | node-cron | Periodic `expire_holds()` as a safety net |
+| Tools | Git / GitHub, Postman, pgAdmin | Version control, API and SQL testing |
 
 ## Architecture
 
