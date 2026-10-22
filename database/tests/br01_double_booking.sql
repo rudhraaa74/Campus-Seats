@@ -11,7 +11,7 @@ BEGIN
     -- Attempting to insert another HELD or ACTIVE ticket on the same seat
     -- must be blocked by the DBMS.
     INSERT INTO ticket (booking_id, show_id, venue_id, row_label, seat_no, attendee_type, price_paid, status)
-    VALUES (2, 1, 1, 'A', 1, 'STUDENT', 100.00, 'HELD');
+    VALUES (2, 1, 1, 'A', 1, 'GUEST', 250.00, 'HELD');
 
     RAISE EXCEPTION 'TEST FAILED: Double booking was allowed on seat A-1!';
 EXCEPTION

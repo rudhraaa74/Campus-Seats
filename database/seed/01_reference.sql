@@ -19,11 +19,11 @@ ALTER SEQUENCE club_club_id_seq RESTART WITH 3;
 -- Using standard bcrypt hash for Password123!
 INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type)
 VALUES
-    (1, 'manager@seatsync.ac.in', '$2b$10$wKq9yR6hW2dOekCsmqXfpeV04hC5hC3Xo7Q1ZgG.0Hw8t3P9S4Uea', 'Pranay', 'Pratyush', '9876543210', 'STUDENT'),
-    (2, 'student1@seatsync.ac.in', '$2b$10$wKq9yR6hW2dOekCsmqXfpeV04hC5hC3Xo7Q1ZgG.0Hw8t3P9S4Uea', 'Rudhra', 'Koul', '9876543211', 'STUDENT'),
-    (3, 'student2@seatsync.ac.in', '$2b$10$wKq9yR6hW2dOekCsmqXfpeV04hC5hC3Xo7Q1ZgG.0Hw8t3P9S4Uea', 'Areesha', 'Shahid', '9876543212', 'STUDENT'),
-    (4, 'faculty@seatsync.ac.in', '$2b$10$wKq9yR6hW2dOekCsmqXfpeV04hC5hC3Xo7Q1ZgG.0Hw8t3P9S4Uea', 'Ramesh', 'Sharma', '9876543213', 'FACULTY'),
-    (5, 'guest@seatsync.ac.in', '$2b$10$wKq9yR6hW2dOekCsmqXfpeV04hC5hC3Xo7Q1ZgG.0Hw8t3P9S4Uea', 'John', 'Doe', '9876543214', 'GUEST')
+    (1, 'manager@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Pranay', 'Pratyush', '9876543210', 'STUDENT'),
+    (2, 'student1@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Rudhra', 'Koul', '9876543211', 'STUDENT'),
+    (3, 'student2@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Areesha', 'Shahid', '9876543212', 'STUDENT'),
+    (4, 'faculty@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Ramesh', 'Sharma', '9876543213', 'FACULTY'),
+    (5, 'guest@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'John', 'Doe', '9876543214', 'GUEST')
 ON CONFLICT (user_id) DO NOTHING;
 
 ALTER SEQUENCE users_user_id_seq RESTART WITH 6;
