@@ -714,21 +714,26 @@ export function SeatMap({
           3. SELECTION SUMMARY & HOLD ACTION DOCK
          ───────────────────────────────────────────────────────────── */}
       {selectedSeats.length > 0 && (
-        <div className="mt-8 pt-6 border-t border-slate-200 bg-slate-50/70 p-5 rounded-2xl border">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div className="mt-8 pt-6 border-t border-slate-200 bg-slate-50/80 p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-200/70">
             <div>
-              <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Ticket className="w-4 h-4 text-emerald-600" />
-                Selected Seats ({selectedSeats.length} / 6)
-              </h4>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Assign attendee tier per seat to apply student subsidy or faculty rates.
+              <div className="flex items-center gap-2.5">
+                <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-emerald-600" />
+                  Selected Seats
+                </h4>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  {selectedSeats.length} of 6 seats
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Student rate applied by default. You can adjust attendee rates below.
               </p>
             </div>
 
             <div className="text-right">
               <span className="text-xs text-slate-500 font-medium">Estimated Subtotal</span>
-              <div className="text-2xl font-extrabold text-slate-900">₹{estimatedTotal}</div>
+              <div className="text-2xl font-extrabold text-slate-900 tracking-tight">₹{estimatedTotal}</div>
             </div>
           </div>
 
@@ -736,90 +741,99 @@ export function SeatMap({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
             {selectedSeats.map((s) => {
               const price = getSeatPrice(s.category_name, s.attendee_type);
+              const isGold = s.category_name?.toLowerCase() === 'gold';
               return (
                 <div
                   key={`${s.row_label}-${s.seat_no}`}
-                  className="bg-white border border-slate-200 p-2.5 rounded-xl flex items-center justify-between shadow-2xs text-xs"
+                  className="bg-white border border-slate-200 hover:border-emerald-400 rounded-xl p-3.5 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between gap-2.5"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-md bg-emerald-600 text-white font-mono font-bold text-[10px] flex items-center justify-center">
-                      {s.row_label}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900">
-                          Row {s.row_label}, Seat {s.seat_no}
-                        </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                          {s.attendee_type} Rate
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-500">{s.category_name} Tier</div>
+                  {/* Top Row: Seat Identifier & Tier Pill & Remove */}
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                      <span className="font-bold text-slate-900 text-sm whitespace-nowrap">
+                        Row {s.row_label}, Seat {s.seat_no}
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                          isGold
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        {s.category_name}
+                      </span>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSeat(s.row_label, s.seat_no)}
+                      className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1 rounded-md transition-colors shrink-0"
+                      title="Remove seat"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                <div className="flex items-center gap-2">
-                  <select
-                    value={s.attendee_type}
-                    onChange={(e) =>
-                      handleAttendeeTypeChange(s.row_label, s.seat_no, e.target.value)
-                    }
-                    className="px-2 py-1 rounded-md border border-slate-300 text-[11px] font-semibold bg-slate-50 text-slate-800"
-                  >
-                    <option value="STUDENT">Student</option>
-                    <option value="FACULTY">Faculty</option>
-                    <option value="GUEST">Guest</option>
-                  </select>
+                  {/* Bottom Row: Rate Selector & Price */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-slate-400 font-medium">Rate:</span>
+                      <select
+                        value={s.attendee_type}
+                        onChange={(e) =>
+                          handleAttendeeTypeChange(s.row_label, s.seat_no, e.target.value)
+                        }
+                        className="px-2 py-0.5 rounded-md border border-slate-200 text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      >
+                        <option value="STUDENT">Student</option>
+                        <option value="FACULTY">Faculty</option>
+                        <option value="GUEST">Guest</option>
+                      </select>
+                    </div>
 
-                  <span className="font-bold text-slate-900 min-w-[36px] text-right">
-                    ₹{price}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSeat(s.row_label, s.seat_no)}
-                    className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-100"
-                    title="Remove seat"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                    <div className="text-right">
+                      <span className="font-extrabold text-slate-900 text-base">₹{price}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Policy Note */}
-        <div className="mb-4 flex items-center justify-between text-[11px] text-slate-500 bg-white/70 p-2.5 rounded-xl border border-slate-200">
-          <span className="flex items-center gap-1.5">
-            <Info className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-            <span>Students book at the student rate for all accompanying attendees (up to 6 tickets per booking).</span>
-          </span>
-          <span className="font-semibold text-slate-700">Max 6 tickets</span>
-        </div>
-
-        {/* Inline Selection Error Banner right above Hold Button */}
-        {selectionError && (
-          <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 font-medium">{selectionError}</div>
-            <button
-              type="button"
-              onClick={() => setSelectionError('')}
-              className="text-red-400 hover:text-red-600"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+              );
+            })}
           </div>
-        )}
 
-        {/* Hold Button */}
-        <button
-          type="button"
-          disabled={isSubmitting}
-          onClick={handleCreateHold}
-          className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
-        >
+          {/* Policy Note */}
+          <div className="mb-4 flex items-center justify-between text-xs text-slate-600 bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs">
+            <span className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Student rate applies to all tickets booked under your account.</span>
+            </span>
+            <span className="font-semibold text-slate-500 text-[11px] uppercase tracking-wider">
+              Rule BR6: Max 6
+            </span>
+          </div>
+
+          {/* Inline Selection Error Banner right above Hold Button */}
+          {selectionError && (
+            <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 font-medium">{selectionError}</div>
+              <button
+                type="button"
+                onClick={() => setSelectionError('')}
+                className="text-red-400 hover:text-red-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Hold Button */}
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={handleCreateHold}
+            className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
