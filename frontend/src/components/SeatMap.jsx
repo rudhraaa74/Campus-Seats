@@ -140,9 +140,12 @@ export function SeatMap({
 
       let payload;
       if (venueType === 'classroom') {
+        const capacity = classroomData?.capacity || 0;
+        const remaining = classroomData?.remaining ?? capacity;
+        const maxPasses = Math.max(0, Math.min(6, remaining));
         payload = {
           show_id: showId,
-          ticket_count: classroomQty,
+          ticket_count: Math.min(classroomQty, maxPasses || 1),
           tickets: [],
         };
       } else {
@@ -190,9 +193,11 @@ export function SeatMap({
     const booked = classroomData?.booked_count || (capacity - remaining);
     const occupancyPercent = capacity > 0 ? Math.round((booked / capacity) * 100) : 0;
     const isSoldOut = remaining <= 0;
+    const maxPasses = Math.max(0, Math.min(6, remaining));
+    const effectiveQty = isSoldOut ? 0 : Math.min(classroomQty, maxPasses || 1);
 
     const classroomPrice = getSeatPrice('General', classroomAttendeeType);
-    const classroomTotal = classroomPrice * classroomQty;
+    const classroomTotal = classroomPrice * effectiveQty;
 
     return (
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
@@ -270,25 +275,25 @@ export function SeatMap({
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Select Passes (Max 6)
+                Select Passes (Max {maxPasses})
               </span>
               <div className="flex items-center gap-3 mt-2">
                 <button
                   type="button"
-                  disabled={classroomQty <= 1}
+                  disabled={effectiveQty <= 1 || isSoldOut}
                   onClick={() => setClassroomQty((prev) => Math.max(1, prev - 1))}
                   className="w-8 h-8 rounded-lg bg-white border border-slate-300 font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
                 >
                   -
                 </button>
                 <span className="text-lg font-bold text-slate-900 w-8 text-center font-mono">
-                  {classroomQty}
+                  {effectiveQty}
                 </span>
                 <button
                   type="button"
-                  disabled={classroomQty >= Math.min(6, remaining)}
+                  disabled={effectiveQty >= maxPasses || isSoldOut}
                   onClick={() =>
-                    setClassroomQty((prev) => Math.min(6, Math.min(remaining, prev + 1)))
+                    setClassroomQty((prev) => Math.min(maxPasses, prev + 1))
                   }
                   className="w-8 h-8 rounded-lg bg-white border border-slate-300 font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
                 >
@@ -322,7 +327,7 @@ export function SeatMap({
 
           <button
             type="button"
-            disabled={isSoldOut || isSubmitting}
+            disabled={isSoldOut || isSubmitting || maxPasses <= 0}
             onClick={handleCreateHold}
             className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
           >
@@ -338,7 +343,7 @@ export function SeatMap({
             ) : (
               <>
                 <ShieldCheck className="w-4 h-4" />
-                Hold {classroomQty} {classroomQty === 1 ? 'Pass' : 'Passes'} & Proceed to Pay (₹
+                Hold {effectiveQty} {effectiveQty === 1 ? 'Pass' : 'Passes'} & Proceed to Pay (₹
                 {classroomTotal})
               </>
             )}

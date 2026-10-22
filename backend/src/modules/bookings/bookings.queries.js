@@ -265,3 +265,18 @@ export async function cancelBookingInDb(clientOrPool, bookingId) {
   const result = await executor.query(query, [bookingId]);
   return result.rows[0] || null;
 }
+
+/**
+ * Retrieves the SUCCESS payment record for an already confirmed booking
+ */
+export async function getSuccessfulPaymentByBookingId(clientOrPool, bookingId) {
+  const executor = clientOrPool || pool;
+  const query = `
+    SELECT payment_id, booking_id, amount, payment_method, gateway_ref, status, paid_at
+    FROM payment
+    WHERE booking_id = $1 AND status = 'SUCCESS'
+    LIMIT 1;
+  `;
+  const result = await executor.query(query, [bookingId]);
+  return result.rows[0] || null;
+}

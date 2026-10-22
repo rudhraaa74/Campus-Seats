@@ -11,8 +11,8 @@ import { pool } from '../db/pool.js';
  * Executes SELECT expire_holds() in PostgreSQL to ensure no stale holds linger.
  */
 export function startHoldExpiryCron() {
-  // Cron schedule: every 30 seconds
-  const task = cron.schedule('*/30 * * * * *', async () => {
+  // Cron schedule: every 10 seconds
+  const task = cron.schedule('*/10 * * * * *', async () => {
     try {
       await pool.query('SELECT expire_holds();');
     } catch (err) {
@@ -20,6 +20,6 @@ export function startHoldExpiryCron() {
     }
   });
 
-  console.log('✓ Hold-expiry safety net cron scheduled (every 30 seconds)');
+  console.log('✓ Hold-expiry safety net cron scheduled (every 10 seconds)');
   return task;
 }

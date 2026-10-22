@@ -84,7 +84,7 @@ export function Checkout() {
 
   const handlePay = async (e) => {
     e.preventDefault();
-    if (isExpired) return;
+    if (isExpired || paying) return;
 
     try {
       setPaying(true);

@@ -87,12 +87,18 @@ export async function getAuditoriumSeats(showId, venueId) {
       ) AS status
     FROM seat s
     JOIN seat_category sc ON s.category_id = sc.category_id
-    LEFT JOIN ticket t ON (
+    LEFT JOIN (
+      ticket t
+      JOIN booking b ON t.booking_id = b.booking_id
+    ) ON (
       t.show_id = $1 
       AND t.venue_id = s.venue_id 
       AND t.row_label = s.row_label 
       AND t.seat_no = s.seat_no 
-      AND t.status IN ('HELD', 'ACTIVE')
+      AND (
+        t.status = 'ACTIVE' 
+        OR (t.status = 'HELD' AND b.status = 'PENDING' AND b.hold_expires_at > CURRENT_TIMESTAMP)
+      )
     )
     WHERE s.venue_id = $2
     ORDER BY s.row_label ASC, s.seat_no ASC;
@@ -119,7 +125,16 @@ export async function getClassroomSeatStatus(showId, venueId) {
     FROM show s
     JOIN venue v ON s.venue_id = v.venue_id
     LEFT JOIN seat_category sc ON sc.venue_id = v.venue_id
-    LEFT JOIN ticket t ON t.show_id = s.show_id AND t.status IN ('HELD', 'ACTIVE')
+    LEFT JOIN (
+      ticket t
+      JOIN booking b ON t.booking_id = b.booking_id
+    ) ON (
+      t.show_id = s.show_id 
+      AND (
+        t.status = 'ACTIVE' 
+        OR (t.status = 'HELD' AND b.status = 'PENDING' AND b.hold_expires_at > CURRENT_TIMESTAMP)
+      )
+    )
     WHERE s.show_id = $1
     GROUP BY v.venue_id, v.name, v.venue_type, v.capacity, sc.category_id, sc.name;
   `;

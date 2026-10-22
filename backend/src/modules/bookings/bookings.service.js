@@ -164,10 +164,18 @@ export async function payBooking({ bookingId, userId, paymentMethod = 'UPI', sim
 
     // 3. Status checks
     if (booking.status === 'CONFIRMED') {
-      const error = new Error('This booking is already confirmed and paid for.');
-      error.status = 409;
-      error.code = 'ALREADY_PAID';
-      throw error;
+      // Idempotently return existing confirmation on double-tap or retry
+      const payment = await queries.getSuccessfulPaymentByBookingId(client, bookingId);
+      return {
+        booking,
+        payment: payment || {
+          payment_id: null,
+          amount: booking.total_amount,
+          payment_method: 'UPI',
+          status: 'SUCCESS',
+          paid_at: booking.booked_at,
+        },
+      };
     }
 
     if (booking.status === 'CANCELLED') {

@@ -209,14 +209,15 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
       expect(detail.body.booking.tickets[0].status).toBe('ACTIVE');
     });
 
-    it('rejects duplicate payment on an already confirmed booking (ALREADY_PAID)', async () => {
+    it('idempotently returns existing confirmation when paying for an already confirmed booking', async () => {
       const res = await request(app)
         .post(`/api/v1/bookings/${bookingToPayId}/pay`)
         .set('Authorization', `Bearer ${facultyToken}`)
         .send({ payment_method: 'UPI' });
 
-      expect(res.status).toBe(409);
-      expect(res.body.error.code).toBe('ALREADY_PAID');
+      expect(res.status).toBe(200);
+      expect(res.body.booking.status).toBe('CONFIRMED');
+      expect(res.body.booking.payment.status).toBe('SUCCESS');
     });
 
     it('rejects payment on expired hold (HOLD_EXPIRED)', async () => {
