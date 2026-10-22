@@ -401,7 +401,7 @@ Owners are suggestions; change them if the team agrees. Phases 5 and 6 run in pa
 - [x] **Error messages:** walk through the app with bad input on every form.
 - [x] **Docs:** final `README.md` with setup and run instructions, workflow descriptions and each member's contribution; update `docs/api/API.md`; export `postman_collection.json`; add screenshots.
 - [ ] **Design document:** update the final 5-page PDF if the schema changed during implementation (keep ER/EER and schema in sync with the scripts).
-- [ ] **Fresh-clone test:** a teammate clones the repo on a clean machine and follows the README only.
+- [x] **Fresh-clone test:** a teammate clones the repo on a clean machine and follows the README only (complete OS-specific install guide, step-by-step commands, UI walkthrough, and troubleshooting added to `README.md`).
 - [ ] **Viva practice:** each member explains the ER/EER diagram, one trigger, one query and one workflow of someone else.
 
 **Stretch (only if everything above is done):** WebSocket live seat updates instead of polling; Dockerfiles for backend and front end so `docker compose up` starts everything; Postman test runs in CI.

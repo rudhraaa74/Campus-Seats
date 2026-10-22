@@ -142,106 +142,225 @@ SeatSync models **15 relational tables**:
 
 ---
 
-## Quick Start Guide
+---
 
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 18+ & npm
-- PostgreSQL client (`psql`)
+## Fresh-Clone Setup & Teammate Guide
 
-### 1. Start Infrastructure Services
+If you are a teammate cloning this repository on a clean machine, follow these steps to install prerequisites, configure the environment, run automated tests, and launch the application.
+
+### 1. Prerequisites by Operating System
+
+Ensure your system has **Git**, **Node.js (v18+ or v20+)**, **npm**, **Docker & Docker Compose**, and the **PostgreSQL client (`psql`)**.
+
+#### macOS (Homebrew)
+```bash
+# Install Node.js, Git, and PostgreSQL client
+brew install node git libpq
+
+# Make psql available in your PATH (if not already linked)
+brew link --force libpq
+# Or add to ~/.zshrc: export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+
+# Install and launch Docker Desktop from:
+# https://www.docker.com/products/docker-desktop/
+# Make sure the Docker engine is running before proceeding!
+```
+
+#### Ubuntu / Debian Linux
+```bash
+sudo apt update
+sudo apt install -y git curl nodejs npm postgresql-client docker.io docker-compose-plugin
+
+# Start and enable Docker service
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+# Log out and log back in for docker group permissions to take effect
+```
+
+#### Windows (WSL 2 Recommended)
+1. Install [Docker Desktop for Windows](https://docs.docker.com/desktop/install/windows-install/) and enable **WSL 2 Integration** in Docker Desktop settings.
+2. Open your Ubuntu WSL 2 terminal and run:
+```bash
+sudo apt update
+sudo apt install -y git curl nodejs npm postgresql-client
+```
+
+---
+
+### 2. Step-by-Step Setup from Fresh Clone
+
+#### Step 1: Clone the Repository & Enter Workspace
+```bash
+git clone <repository-url>
+cd campus-seats
+```
+
+#### Step 2: Configure Environment Files
+Copy the template configuration files for root, backend, and frontend:
 ```bash
 cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+*(The default configurations map PostgreSQL to port `5433` and Redis to port `6380` so they never conflict with any locally installed default Postgres or Redis services).*
+
+#### Step 3: Start Database & Redis Services
+```bash
 docker compose up -d
 ```
-*PostgreSQL runs on port `5433` and Redis runs on port `6380` (configured to avoid conflicts with default system services).*
+Verify that both containers are running and healthy:
+```bash
+docker compose ps
+```
+*Expected: `campus-seats-db-1` (port 5433) and `campus-seats-redis-1` (port 6380) running.*
 
-### 2. Initialize Database & Generate 1,200-Record Dataset
-Run the one-command database reset and seed generator:
+#### Step 4: Install Dependencies
+Run the root setup command (or install backend and frontend separately):
+```bash
+# One-command install for both backend and frontend:
+npm run setup
+
+# Or manually:
+cd backend && npm install && cd ..
+cd frontend && npm install && cd ..
+```
+
+#### Step 5: Initialize Schema & Seed 1,200 Records
+Run the automated schema application and seed generator:
 ```bash
 ./database/scripts/reset.sh --seed
+# Or: npm run db:reset
 ```
-This drops the database, applies all extensions, tables, indexes, triggers, and views in order, and generates **1,199 records** across all 15 relations:
-- 500 physical auditorium seats
-- 64 users (41 students, 12 faculty, 11 guests)
-- 8 campus events & 5 campus clubs
-- 14 shows scheduled across 4 venues
-- 125 bookings, 235 tickets, and 119 payments
-
-### 3. Start Backend API Server
-```bash
-cd backend
-npm install
-npm run dev
-```
-*API server starts at `http://localhost:3001`.*
-
-### 4. Start Front-End Client
-```bash
-cd frontend
-npm install
-npm run dev
-```
-*Vite client starts at `http://localhost:5173`.*
+This executes all 6 DDL migrations (extensions, tables, indexes, functions, triggers, views) and executes `generate_seed.js` to create **1,199 production records** across all 15 tables.
 
 ---
 
-## Demo Credentials
+### 3. Testing & Verification
 
-All seeded demo accounts use the standard password: `Password123!`
+Before launching the servers, verify that the database constraints and APIs pass 100% of their test suites:
 
-| Role | Email | Club / Specialization | Access Privileges |
+#### A. Backend Integration & Concurrency Tests (Jest)
+```bash
+npm run test
+# Or: cd backend && npm test
+```
+**Expected:** `6 passed, 6 total` suites, **`64 passed, 64 total`** tests.
+Tests auth flows, seat hold expiration, double-booking race conditions, payment verification, and organizer reports.
+
+#### B. Database Rule Violation Tests (SQL)
+```bash
+npm run test:db
+# Or: ./database/tests/run_all.sh
+```
+**Expected:** `Summary: 5 / 5 tests passed.`
+
+#### C. Live Constraint Enforcement Demo
+```bash
+npm run test:demo
+# Or: ./demo_constraints.sh
+```
+**Expected:** `ALL 5 / 5 CONSTRAINTS LIVE-VERIFIED & ENFORCED BY DBMS!`
+Live demonstration of PostgreSQL error messages for double-booking (BR1), show overlap (BR2), classroom seat rules (BR3), ticket limits (BR6), and duplicate payments (BR15).
+
+---
+
+### 4. Running the Application Locally
+
+Start the backend API and frontend Vite servers in separate terminal tabs:
+
+#### Terminal 1 — Backend API Server
+```bash
+npm run dev:backend
+# Or: cd backend && npm run dev
+```
+- Server URL: **`http://localhost:3001`**
+- Health Check: **`http://localhost:3001/api/v1/health`** (returns `{ "status": "ok", "db": "connected", "redis": "connected" }`)
+
+#### Terminal 2 — Frontend Client (Vite)
+```bash
+npm run dev:frontend
+# Or: cd frontend && npm run dev
+```
+- Client Application: **`http://localhost:5173`**
+
+Open **`http://localhost:5173`** in your browser.
+
+---
+
+## Demo Credentials & UI Walkthrough
+
+All test accounts use the standard demo password: **`Password123!`**
+
+| Role | Email | Password | Privileges & Key Workflows |
 |---|---|---|---|
-| **Club Manager** | `manager@seatsync.ac.in` | Music Society (Admin) | Organizer show setup, classroom creator, analytics dashboard |
-| **Student Attendee** | `student1@seatsync.ac.in` | 3rd Year CS Student | Student-subsidised tickets, student-only shows, booking history |
-| **Faculty Attendee** | `faculty@seatsync.ac.in` | CS Department Faculty | Faculty rate tickets, faculty-eligible shows |
-| **Guest Attendee** | `guest@seatsync.ac.in` | Campus Alumni Network | General public / guest pricing shows |
+| **Club Manager** | `manager@seatsync.ac.in` | `Password123!` | Create events, schedule shows (Auditorium & Classroom), set prices, view reports dashboard |
+| **Student Attendee** | `student1@seatsync.ac.in` | `Password123!` | Book auditorium seats / classroom passes at student rate; see student-only events |
+| **Faculty Attendee** | `faculty@seatsync.ac.in` | `Password123!` | Book tickets at faculty rate; view booking history & cancellations |
+| **Guest Attendee** | `guest@seatsync.ac.in` | `Password123!` | General public bookings; restricted from student-only shows |
+
+### Step-by-Step Verification in the Browser:
+
+1. **Test Attendee Exact Seat Booking (Auditorium):**
+   - Log in as `student1@seatsync.ac.in` / `Password123!`.
+   - On `/events`, click on **"Oasis Cultural Night"** or any auditorium show.
+   - Click an available seat on the interactive SVG seat map (e.g., in Row H, I, or J).
+   - Notice the selected seat counter and calculated student price.
+   - Click **"Proceed to Checkout"**.
+   - Notice the **5-minute countdown timer** (synced with Redis TTL).
+   - Click **"Confirm & Pay"** (select Credit Card or UPI).
+   - Booking transitions to **CONFIRMED**, payment is marked **SUCCESS**, and tickets are displayed on `/my-bookings`.
+
+2. **Test Classroom General Admission Booking:**
+   - On `/events`, select a Classroom event (e.g. **"Machine Learning Workshop"** or **"Debate Championship"**).
+   - Notice the venue displays **Classroom** with total capacity and live remaining passes.
+   - Use the ticket counter to select passes (e.g., 2 passes) without choosing seat numbers.
+   - Complete checkout and verify tickets are issued with `row_label: NULL` and `seat_no: NULL` per Rule BR3.
+
+3. **Test Club Manager Show Creation & Audience Restrictions:**
+   - Log in as `manager@seatsync.ac.in` / `Password123!`.
+   - Click **"Organizer Dashboard"** in the navigation bar.
+   - Click **"Schedule Show"**.
+   - Try creating a show for **Main Auditorium** or choose **Classroom** and enter a custom room number (e.g. `Room 405`, capacity `50`).
+   - Select **Target Audience** = `Student Only`.
+   - Submit and verify the show is scheduled.
+   - Log out, log in as `guest@seatsync.ac.in`, and verify that the newly created student-only show is automatically hidden from guests.
+
+4. **Test Analytics & Reporting Dashboard:**
+   - As `manager@seatsync.ac.in`, navigate to `/dashboard`.
+   - Inspect the **Occupancy Rate**, **Gross Revenue**, **Tickets Sold**, and **Active Shows** metric cards.
+   - Filter by specific events and review the attendee tier breakdown (Student vs Faculty vs Guest) calculated by PostgreSQL views.
+
+5. **Test Cancellations & Refunds:**
+   - Under **"My Bookings"** (`/my-bookings`), find a confirmed booking and click **"Cancel Booking"**.
+   - Confirm cancellation: booking status changes to `CANCELLED`, tickets are freed, and refund record is created.
 
 ---
 
-## Testing & Verification
+## Troubleshooting Guide for Teammates
 
-### Automated Backend Tests (Jest)
-Run all API integration and concurrency tests:
+### 1. `psql: command not found`
+- **macOS:** Run `brew install libpq && brew link --force libpq`. If it still isn't recognized, add `/opt/homebrew/opt/libpq/bin` to your `PATH` in `~/.zshrc`.
+- **Linux / WSL 2:** Run `sudo apt update && sudo apt install -y postgresql-client`.
+
+### 2. `Error: connect ECONNREFUSED 127.0.0.1:5433`
+- PostgreSQL is not running on port 5433.
+- Verify Docker is running: `docker compose ps`.
+- If containers stopped, start them: `docker compose up -d`.
+
+### 3. `Port 5433 or 6380 already allocated`
+- Another process is using port 5433 or 6380.
+- Check what process is using the port: `lsof -i :5433` or `lsof -i :6380`.
+- Alternatively, adjust `POSTGRES_PORT` or `REDIS_PORT` in your root `.env` and `backend/.env`.
+
+### 4. `Permission denied: ./demo_constraints.sh`
+- Grant executable permissions to all shell scripts:
 ```bash
-cd backend
-npm test
-```
-**Results:** `6 passed, 6 total` suites; **`64 passed, 64 total`** tests.
-- `auth.test.js`: Registration, login, profile retrieval, invalid credentials.
-- `browse.test.js`: Event catalog, venue filtering, seat availability maps.
-- `bookings.test.js`: Seat holds, 5-min Redis TTL, simulated payments, expired holds, ticket limit rejections.
-- `organizer.test.js`: Event creation, show scheduling, classroom setup, price configuration, show cancellation.
-- `reports.test.js`: Occupancy, revenue breakdown, top events aggregation.
-- `double-booking.test.js`: Concurrent race condition test validating partial unique index and row locking.
-
-### Database Integrity Tests (SQL)
-Run all standalone PostgreSQL rule violation tests:
-```bash
-./database/tests/run_all.sh
-```
-**Results:** `5 / 5 tests passed.`
-
----
-
-## Live Constraint Enforcement Demo
-
-To witness live database-level constraint rejections with descriptive PostgreSQL error messages, run the interactive demonstration script:
-```bash
-./demo_constraints.sh
+chmod +x demo_constraints.sh database/scripts/*.sh database/tests/*.sh
 ```
 
-**Demonstrated Rejections:**
-1. **Rule BR1 (Double Booking):** Rejection of duplicate live ticket insertion via `uq_ticket_live_seat`.
-   `ERROR: duplicate key value violates unique constraint "uq_ticket_live_seat"`
-2. **Rule BR2 (Show Overlap):** Rejection of overlapping show booking in Main Auditorium via `ex_show_venue_overlap`.
-   `ERROR: conflicting key value violates exclusion constraint "ex_show_venue_overlap"`
-3. **Rule BR3 (Classroom Seat Coordinates):** Rejection of physical seat numbers for classroom venues via `ck_ticket_classroom_null_seat`.
-   `ERROR: Could not determine seat category for ticket.`
-4. **Rule BR6 (Ticket Limits):** Rejection of 7th ticket insertion into a single reservation via `fn_check_ticket_limits()`.
-   `ERROR: A booking cannot contain more than 6 live tickets.`
-5. **Rule BR15 (Duplicate Successful Payment):** Rejection of secondary payment via `uq_payment_one_success`.
-   `ERROR: duplicate key value violates unique constraint "uq_payment_one_success"`
+### 5. `Vite Frontend cannot connect to Backend API`
+- Verify backend is running on `http://localhost:3001` by visiting `http://localhost:3001/api/v1/health`.
+- Check `frontend/.env`: ensure `VITE_API_URL=http://localhost:3001/api/v1`.
 
 ---
 
@@ -251,10 +370,12 @@ To witness live database-level constraint rejections with descriptive PostgreSQL
 .
 ├── docker-compose.yml             # PostgreSQL 15 (5433) & Redis (6380)
 ├── demo_constraints.sh            # Live DBMS constraint enforcement demonstration
+├── package.json                   # Root workspace helper scripts
 ├── .env.example                   # Environment configuration template
 ├── docs/
 │   ├── Database_Design_Document.pdf
 │   ├── Application_Design.pdf
+│   ├── architecture/              # Diagrams (ER, EER, schema, sequences)
 │   └── api/
 │       ├── API.md                 # Complete REST API specification
 │       └── postman_collection.json # Exported Postman collection
@@ -279,4 +400,5 @@ To witness live database-level constraint rejections with descriptive PostgreSQL
 │       └── pages/                 # Events, ShowDetail, Checkout, Dashboard
 └── PLAN.md                        # Master implementation roadmap
 ```
+
 
