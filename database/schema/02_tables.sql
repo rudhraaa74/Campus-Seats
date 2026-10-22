@@ -1,0 +1,3 @@
+-- 02_tables.sql
+-- All 15 tables for SeatSync
+-- TODO: Phase 1 — create tables with PK, FK, UNIQUE, NOT NULL, CHECK

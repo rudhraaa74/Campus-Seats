@@ -1,0 +1,3 @@
+-- reports.sql
+-- The 5+ non-trivial queries used by the dashboard and demo
+-- To be developed in Phase 1 & 6

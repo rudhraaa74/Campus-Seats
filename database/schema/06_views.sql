@@ -1,0 +1,3 @@
+-- 06_views.sql
+-- v_venue_capacity + reporting views
+-- TODO: Phase 1

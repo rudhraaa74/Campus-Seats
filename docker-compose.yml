@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────────────────────────
+# SeatSync — Docker Compose
+# ─────────────────────────────────────────────────────────────
+# Starts PostgreSQL and Redis for local development.
+#
+# Usage:
+#   cp .env.example .env        # first time only
+#   docker compose up -d        # start services
+#   docker compose down -v      # stop and remove volumes
+# ─────────────────────────────────────────────────────────────
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ───────────────────────────────────────────────────
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    # Enable keyspace notifications for hold-expiry events
+    command: redis-server --notify-keyspace-events Ex
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

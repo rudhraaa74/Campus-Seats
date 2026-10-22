@@ -1,0 +1,3 @@
+-- 01_reference.sql
+-- Venues, seats, categories, clubs, club managers
+-- To be populated in Phase 1

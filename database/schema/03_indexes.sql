@@ -1,0 +1,3 @@
+-- 03_indexes.sql
+-- Partial unique indexes, EXCLUDE, and search indexes
+-- TODO: Phase 1

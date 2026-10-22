@@ -93,18 +93,50 @@ Details and sequence diagram: [`docs/Application_Design.pdf`](docs/Application_D
 
 ```
 .
+├── docker-compose.yml             # PostgreSQL 15 (port 5433) & Redis (port 6380)
+├── .env.example                   # Environment configuration template
 ├── docs/
 │   ├── Database_Design_Document.pdf
-│   └── Application_Design.pdf
-├── database/          # schema, constraints, triggers, views, sample data (planned)
-├── backend/           # Node.js + Express API (planned)
-├── frontend/          # React + Tailwind app (planned)
-└── README.md
+│   ├── Application_Design.pdf
+│   ├── architecture/              # Diagrams (ER, EER, schema, sequences)
+│   └── api/
+│       ├── API.md                 # REST API specification & contract
+│       └── postman_collection.json
+├── database/                      # Complete SQL scripts & database tests
+│   ├── schema/                    # 01_extensions -> 06_views (run in numeric order)
+│   ├── seed/                      # Reference and demo datasets
+│   ├── queries/                   # Non-trivial analytics & report queries
+│   ├── tests/                     # Integrity rule violation tests
+│   └── scripts/                   # apply.sh, reset.sh
+├── backend/                       # Node.js + Express API
+│   ├── src/                       # Modular feature structure (auth, bookings, organizer...)
+│   └── tests/                     # API & concurrency tests
+├── frontend/                      # React + Tailwind CSS client
+└── PLAN.md                        # Master project roadmap and checklist
 ```
 
-## Setup and run
+## Quick start
 
-Coming with the final submission (database scripts, environment variables, backend and front-end start commands).
+### Prerequisites
+- Docker & Docker Compose
+- Node.js 18+ & npm
+- PostgreSQL client (`psql`)
+
+### 1. Start Services
+```bash
+cp .env.example .env
+docker compose up -d
+```
+PostgreSQL runs on port `5433` and Redis runs on port `6380` (configured to prevent conflicts with local services).
+
+### 2. Initialize Database
+```bash
+# Apply schema
+./database/scripts/apply.sh
+
+# Full database reset with seed data
+./database/scripts/reset.sh --seed
+```
 
 ## Progress
 

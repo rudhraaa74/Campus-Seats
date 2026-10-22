@@ -1,0 +1,395 @@
+{
+  "info": {
+    "_postman_id": "b13251f6-ff26-425a-b3ad-85f086697c9a",
+    "name": "SeatSync API",
+    "description": "Postman Collection for the SeatSync Campus Venue Booking System API (/api/v1).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student@example.com\",\n  \"password\": \"securepassword\",\n  \"first_name\": \"Rudhra\",\n  \"last_name\": \"Koul\",\n  \"phone\": \"9876543210\",\n  \"user_type\": \"student\",\n  \"roll_number\": \"2023B3AD0445H\",\n  \"year_of_study\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student@example.com\",\n  \"password\": \"securepassword\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "List Events",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/events?type=CULTURAL&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"],
+              "query": [
+                { "key": "type", "value": "CULTURAL" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Event Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/events/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shows",
+      "item": [
+        {
+          "name": "Get Show Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/shows/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["shows", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Show Seats / Availability",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/shows/1/seats",
+              "host": ["{{baseUrl}}"],
+              "path": ["shows", "1", "seats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create Hold (Book Seats)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"show_id\": 1,\n  \"seats\": [\n    { \"row_label\": \"A\", \"seat_no\": 1, \"attendee_type\": \"student\" },\n    { \"row_label\": \"A\", \"seat_no\": 2, \"attendee_type\": \"guest\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings"]
+            }
+          }
+        },
+        {
+          "name": "Pay Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method\": \"UPI\",\n  \"gateway_ref\": \"PAY_TEST_12345\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/bookings/1/pay",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "1", "pay"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organizer",
+      "item": [
+        {
+          "name": "Create Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"club_id\": 1,\n  \"title\": \"Campus Rock Fest 2026\",\n  \"description\": \"Annual music night\",\n  \"event_type\": \"CULTURAL\",\n  \"duration_min\": 180\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizer/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizer", "events"]
+            }
+          }
+        },
+        {
+          "name": "Create Show",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_id\": 1,\n  \"venue_id\": 1,\n  \"start_time\": \"2026-11-01T18:00:00Z\",\n  \"end_time\": \"2026-11-01T21:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizer/shows",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizer", "shows"]
+            }
+          }
+        },
+        {
+          "name": "Set Show Prices",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prices\": [\n    { \"category_id\": 1, \"user_type\": \"student\", \"price\": 100 },\n    { \"category_id\": 1, \"user_type\": \"faculty\", \"price\": 150 },\n    { \"category_id\": 1, \"user_type\": \"guest\", \"price\": 250 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizer/shows/1/prices",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizer", "shows", "1", "prices"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Show",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizer/shows/1/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizer", "shows", "1", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Occupancy Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/occupancy?show_id=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "occupancy"],
+              "query": [
+                { "key": "show_id", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Revenue Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/revenue?club_id=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "revenue"],
+              "query": [
+                { "key": "club_id", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Top Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/top-events?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "top-events"],
+              "query": [
+                { "key": "limit", "value": "5" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
