@@ -146,7 +146,7 @@ PostgreSQL runs on port `5433` and Redis runs on port `6380` (configured to prev
 - [x] Application design: architecture, tech stack, workflows
 - [x] SQL scripts (tables, constraints, triggers, indexes, views)
 - [ ] Sample data (at least 500 records)
-- [ ] Backend API
-- [ ] Front end
+- [x] Backend API (Plumbing, JWT Auth, W1 endpoints)
+- [x] Front end (Vite + React + Tailwind, role navigation, W1 screens)
 - [ ] Reports and dashboard
 - [ ] Concurrency and constraint testing

@@ -274,16 +274,16 @@ Owners are suggestions; change them if the team agrees. Phases 5 and 6 run in pa
 **Goal:** a user can register and log in from the browser; shared plumbing exists for everything after.
 
 **Backend (Geetanjali)**
-- [ ] `config/env.js` (validate required variables at start-up), `db/pool.js`, `db/transaction.js`, `db/errors.js` (mapping table in section 4), `middleware/errorHandler.js`, `routes/v1.js`.
-- [ ] `middleware/auth.js` (JWT) and `requireRole.js`.
-- [ ] `modules/auth`: `POST /auth/register` (one transaction inserts `users` and the matching `student` / `faculty` / `guest` row; bcrypt the password), `POST /auth/login`, `GET /auth/me`.
-- [ ] `GET /health` that checks Postgres and Redis.
-- [ ] Jest + Supertest set up; first tests: register each user type, duplicate email, wrong password, bad roll number.
+- [x] `config/env.js` (validate required variables at start-up), `db/pool.js`, `db/transaction.js`, `db/errors.js` (mapping table in section 4), `middleware/errorHandler.js`, `routes/v1.js`.
+- [x] `middleware/auth.js` (JWT) and `requireRole.js`.
+- [x] `modules/auth`: `POST /auth/register` (one transaction inserts `users` and the matching `student` / `faculty` / `guest` row; bcrypt the password), `POST /auth/login`, `GET /auth/me`.
+- [x] `GET /health` that checks Postgres and Redis.
+- [x] Jest + Supertest set up; first tests: register each user type, duplicate email, wrong password, bad roll number.
 
 **Front end (Rudhra)**
-- [ ] Vite + React + Tailwind + `react-router`; `api/client.js` that adds the token and shows server error messages.
-- [ ] `AuthContext`, `ProtectedRoute`, `Login.jsx`, `Register.jsx` (type selector shows the right extra fields: roll number and year, employee id, affiliation).
-- [ ] Layout with navigation that changes by role.
+- [x] Vite + React + Tailwind + `react-router`; `api/client.js` that adds the token and shows server error messages.
+- [x] `AuthContext`, `ProtectedRoute`, `Login.jsx`, `Register.jsx` (type selector shows the right extra fields: roll number and year, employee id, affiliation).
+- [x] Layout with navigation that changes by role.
 
 **Checkpoint (W1 done):** register as a student, faculty and guest; log in; refresh keeps you logged in; a duplicate email shows a clear message.
 
