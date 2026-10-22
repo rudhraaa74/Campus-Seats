@@ -347,18 +347,18 @@ Owners are suggestions; change them if the team agrees. Phases 5 and 6 run in pa
 **Goal:** attendees can cancel; club managers can create everything an attendee sees.
 
 **Backend — Geetanjali**
-- [ ] `DELETE /bookings/:id` (cancel): rely on BR10 triggers (tickets cancelled, payment refunded); return the updated booking.
-- [ ] `modules/organizer`, all behind `requireClubManager` (BR11):
-  - [ ] `POST /organizer/events`, `PUT /organizer/events/:id`
-  - [ ] `POST /organizer/shows` (venue and time), `POST /organizer/shows/:id/cancel`
-  - [ ] `PUT /organizer/shows/:id/prices` (price grid per seat category and attendee type)
-  - [ ] `GET /organizer/venues` (venues and categories for the forms)
-- [ ] API tests: overlapping show → `VENUE_BUSY`; show shorter than event; price for another venue's category; non-manager → 403; cancel show cancels all bookings.
+- [x] `DELETE /bookings/:id` (cancel): rely on BR10 triggers (tickets cancelled, payment refunded); return the updated booking.
+- [x] `modules/organizer`, all behind `requireClubManager` (BR11):
+  - [x] `POST /organizer/events`, `PUT /organizer/events/:id`
+  - [x] `POST /organizer/shows` (venue and time), `POST /organizer/shows/:id/cancel`
+  - [x] `PUT /organizer/shows/:id/prices` (price grid per seat category and attendee type)
+  - [x] `GET /organizer/venues` (venues and categories for the forms)
+- [x] API tests: overlapping show → `VENUE_BUSY`; show shorter than event; price for another venue's category; non-manager → 403; cancel show cancels all bookings.
 
 **Front end — Geetanjali with Rudhra**
-- [ ] `MyBookings.jsx` with a cancel action and status badges.
-- [ ] Organizer pages: `EventForm`, `ShowForm` (venue picker, time), `PriceGrid`, show cancel button.
-- [ ] Show the database's rejection messages in the forms.
+- [x] `MyBookings.jsx` with a cancel action and status badges.
+- [x] Organizer pages: `EventForm`, `ShowForm` (venue picker, time), `PriceGrid`, show cancel button.
+- [x] Show the database's rejection messages in the forms.
 
 **Checkpoint (W3 and W4 done):** create an event, schedule two shows, set prices, book as an attendee, cancel the show, and see the booking cancelled and refunded; every invalid input is rejected with a clear message.
 

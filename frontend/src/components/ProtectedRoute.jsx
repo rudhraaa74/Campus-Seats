@@ -7,7 +7,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
-export function ProtectedRoute({ children, allowedRoles }) {
+export function ProtectedRoute({ children, allowedRoles, requireClubManager }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
@@ -21,6 +21,10 @@ export function ProtectedRoute({ children, allowedRoles }) {
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requireClubManager && (!user.clubIds || user.clubIds.length === 0)) {
+    return <Navigate to="/" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.user_type)) {

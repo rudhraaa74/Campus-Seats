@@ -81,3 +81,20 @@ export async function getBookingById(req, res, next) {
     next(err);
   }
 }
+
+/**
+ * DELETE /api/v1/bookings/:id
+ * Cancels a booking, cascades ticket cancellations and refunds payments (BR10)
+ */
+export async function cancelBooking(req, res, next) {
+  try {
+    const bookingId = parseInt(req.params.id, 10);
+    const userId = req.user.userId;
+    const userClubIds = req.user.clubIds || [];
+
+    const result = await bookingsService.cancelBooking(bookingId, userId, userClubIds);
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}

@@ -24,4 +24,7 @@ router.get('/:id', bookingsController.getBookingById);
 // POST /api/v1/bookings/:id/pay (confirm & pay)
 router.post('/:id/pay', bookingsController.payBooking);
 
+// DELETE /api/v1/bookings/:id (cancel reservation & refund)
+router.delete('/:id', bookingsController.cancelBooking);
+
 export default router;

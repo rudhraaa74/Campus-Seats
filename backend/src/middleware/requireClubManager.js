@@ -13,8 +13,17 @@ export function requireClubManager(req, res, next) {
     });
   }
 
-  const targetClubId = parseInt(req.body.club_id || req.params.clubId || req.query.club_id, 10);
   const userClubIds = req.user.clubIds || [];
+  if (userClubIds.length === 0) {
+    return res.status(403).json({
+      error: {
+        code: 'FORBIDDEN',
+        message: 'Only club managers are authorized to perform organizer operations.',
+      },
+    });
+  }
+
+  const targetClubId = parseInt(req.body.club_id || req.params.clubId || req.query.club_id, 10);
 
   if (targetClubId && !userClubIds.includes(targetClubId)) {
     return res.status(403).json({

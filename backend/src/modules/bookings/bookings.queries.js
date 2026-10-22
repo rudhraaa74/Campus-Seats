@@ -197,7 +197,13 @@ export async function getBookingById(bookingId) {
     JOIN venue v ON s.venue_id = v.venue_id
     JOIN event e ON s.event_id = e.event_id
     JOIN club c ON e.club_id = c.club_id
-    LEFT JOIN payment p ON (p.booking_id = b.booking_id AND p.status = 'SUCCESS')
+    LEFT JOIN LATERAL (
+      SELECT payment_id, amount, status, payment_method, gateway_ref, paid_at
+      FROM payment
+      WHERE booking_id = b.booking_id
+      ORDER BY payment_id DESC
+      LIMIT 1
+    ) p ON true
     WHERE b.booking_id = $1;
   `;
   const result = await pool.query(query, [bookingId]);
@@ -205,7 +211,7 @@ export async function getBookingById(bookingId) {
 }
 
 /**
- * Retrieves attendee booking history
+ * Retrieves attendee booking history with payment status
  */
 export async function getUserBookings(userId) {
   const query = `
@@ -223,17 +229,39 @@ export async function getUserBookings(userId) {
       e.event_id,
       e.title AS event_title,
       c.name AS club_name,
-      COUNT(t.ticket_id)::int AS ticket_count
+      COUNT(t.ticket_id)::int AS ticket_count,
+      p.status AS payment_status
     FROM booking b
     JOIN show s ON b.show_id = s.show_id
     JOIN venue v ON s.venue_id = v.venue_id
     JOIN event e ON s.event_id = e.event_id
     JOIN club c ON e.club_id = c.club_id
     LEFT JOIN ticket t ON b.booking_id = t.booking_id
+    LEFT JOIN LATERAL (
+      SELECT status FROM payment WHERE booking_id = b.booking_id ORDER BY payment_id DESC LIMIT 1
+    ) p ON true
     WHERE b.user_id = $1
-    GROUP BY b.booking_id, s.show_id, v.venue_id, v.name, v.venue_type, e.event_id, e.title, c.name
+    GROUP BY b.booking_id, s.show_id, v.venue_id, v.name, v.venue_type, e.event_id, e.title, c.name, p.status
     ORDER BY b.booked_at DESC;
   `;
   const result = await pool.query(query, [userId]);
   return result.rows;
+}
+
+/**
+ * Updates a booking status to CANCELLED.
+ * Database trigger trg_booking_cancellation (BR10) automatically cascades:
+ * - cancels all HELD / ACTIVE tickets
+ * - refunds all SUCCESS payments
+ */
+export async function cancelBookingInDb(clientOrPool, bookingId) {
+  const executor = clientOrPool || pool;
+  const query = `
+    UPDATE booking
+    SET status = 'CANCELLED'
+    WHERE booking_id = $1
+    RETURNING booking_id, user_id, show_id, booked_at, hold_expires_at, status, total_amount;
+  `;
+  const result = await executor.query(query, [bookingId]);
+  return result.rows[0] || null;
 }

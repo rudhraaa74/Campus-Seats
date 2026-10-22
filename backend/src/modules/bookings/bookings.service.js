@@ -286,3 +286,66 @@ export async function getUserBookingsList(userId) {
     })),
   };
 }
+
+/**
+ * Cancels a booking (Workflow W3).
+ * Rely on BR10 triggers:
+ * - When booking.status = 'CANCELLED', PostgreSQL trigger fn_cascade_booking_cancellation
+ *   cancels all tickets and refunds any successful payment.
+ * Also clears the Redis hold timer.
+ */
+export async function cancelBooking(bookingId, userId, userClubIds = []) {
+  const booking = await queries.getBookingById(bookingId);
+  if (!booking) {
+    const error = new Error('Booking not found.');
+    error.status = 404;
+    error.code = 'NOT_FOUND';
+    throw error;
+  }
+
+  // Authorization: user must own the booking OR be a club manager
+  const isOwner = booking.user_id === userId;
+  const isClubManager = userClubIds && userClubIds.length > 0;
+
+  if (!isOwner && !isClubManager) {
+    const error = new Error('You do not have permission to cancel this booking.');
+    error.status = 403;
+    error.code = 'FORBIDDEN';
+    throw error;
+  }
+
+  if (booking.status === 'CANCELLED') {
+    const error = new Error('This booking has already been cancelled.');
+    error.status = 400;
+    error.code = 'BOOKING_ALREADY_CANCELLED';
+    throw error;
+  }
+
+  // Check if show has already started
+  if (booking.start_time && new Date(booking.start_time) <= new Date()) {
+    const error = new Error('Cannot cancel a booking for a show that has already started.');
+    error.status = 400;
+    error.code = 'SHOW_ALREADY_STARTED';
+    throw error;
+  }
+
+  // Execute cancellation in database
+  await queries.cancelBookingInDb(null, bookingId);
+
+  // Clear Redis hold key if it was pending
+  await clearHold(bookingId);
+
+  // Fetch updated booking with refreshed tickets & payment
+  const fullBooking = await queries.getBookingById(bookingId);
+  const tickets = await queries.getBookingTickets(null, bookingId);
+
+  return {
+    booking: {
+      ...fullBooking,
+      total_amount: parseFloat(fullBooking.total_amount),
+      tickets,
+    },
+    message: 'Booking cancelled successfully. Payments (if any) have been refunded.',
+  };
+}
+

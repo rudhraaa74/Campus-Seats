@@ -8,6 +8,7 @@ import authRoutes from '../modules/auth/auth.routes.js';
 import eventsRoutes from '../modules/events/events.routes.js';
 import showsRoutes from '../modules/shows/shows.routes.js';
 import bookingsRoutes from '../modules/bookings/bookings.routes.js';
+import organizerRoutes from '../modules/organizer/organizer.routes.js';
 import { pool } from '../db/pool.js';
 import { redis } from '../redis/client.js';
 
@@ -18,6 +19,7 @@ router.use('/auth', authRoutes);
 router.use('/events', eventsRoutes);
 router.use('/shows', showsRoutes);
 router.use('/bookings', bookingsRoutes);
+router.use('/organizer', organizerRoutes);
 
 
 

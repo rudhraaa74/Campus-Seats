@@ -13,6 +13,7 @@ import { Events } from './pages/Events.jsx';
 import { ShowDetail } from './pages/ShowDetail.jsx';
 import { Checkout } from './pages/Checkout.jsx';
 import { MyBookings } from './pages/MyBookings.jsx';
+import { OrganizerDashboard } from './pages/organizer/OrganizerDashboard.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 
 export default function App() {
@@ -47,6 +48,32 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <MyBookings />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Protected Club Manager Organizer routes (W4 / Phase 5) */}
+              <Route
+                path="/organizer"
+                element={
+                  <ProtectedRoute requireClubManager>
+                    <OrganizerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/organizer/dashboard"
+                element={
+                  <ProtectedRoute requireClubManager>
+                    <OrganizerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/organizer/events/new"
+                element={
+                  <ProtectedRoute requireClubManager>
+                    <OrganizerDashboard />
                   </ProtectedRoute>
                 }
               />
