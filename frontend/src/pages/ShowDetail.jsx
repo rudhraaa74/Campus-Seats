@@ -258,7 +258,7 @@ export function ShowDetail() {
             </p>
             <div className="pt-2 border-t border-emerald-800/80 text-[11px] text-emerald-300 space-y-1">
               <div>• Max 6 tickets per booking (Rule BR6)</div>
-              <div>• 1 Subsidized ticket per student show (Rule BR14)</div>
+              <div>• Student & Faculty rates apply to all tickets booked under your account</div>
               <div>• Real-time concurrency protection via partial unique indexes</div>
             </div>
           </div>

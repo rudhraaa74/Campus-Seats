@@ -176,25 +176,18 @@ FOR EACH ROW
 EXECUTE FUNCTION fn_ticket_price_freeze();
 
 -- =============================================================
--- 3. BR6 & BR14: TICKET LIMIT (MAX 6) & SUBSIDISED TICKET RULES
+-- 3. BR6: TICKET LIMIT (MAX 6 LIVE TICKETS PER BOOKING)
 -- =============================================================
-CREATE OR REPLACE FUNCTION fn_check_ticket_limits_and_subsidies()
+CREATE OR REPLACE FUNCTION fn_check_ticket_limits()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_buyer_id INT;
-    v_buyer_type VARCHAR(20);
     v_booking_live_count INT;
-    v_subsidised_count INT;
 BEGIN
     IF NEW.status NOT IN ('HELD', 'ACTIVE') THEN
         RETURN NEW;
     END IF;
-
-    -- Retrieve booking buyer information
-    SELECT user_id INTO v_buyer_id FROM booking WHERE booking_id = NEW.booking_id;
-    SELECT user_type INTO v_buyer_type FROM users WHERE user_id = v_buyer_id;
 
     -- BR6: Max 6 live tickets per booking
     SELECT COUNT(*) INTO v_booking_live_count
@@ -208,40 +201,15 @@ BEGIN
             USING ERRCODE = 'P0001';
     END IF;
 
-    -- BR14: Subsidised ticket rules (STUDENT / FACULTY)
-    IF NEW.attendee_type IN ('STUDENT', 'FACULTY') THEN
-        -- Buyer must match the attendee type to buy a subsidised ticket
-        IF v_buyer_type <> NEW.attendee_type THEN
-            RAISE EXCEPTION 'Cannot purchase a subsidised % ticket with a % account.' ,
-                NEW.attendee_type, v_buyer_type
-                USING ERRCODE = 'P0001';
-        END IF;
-
-        -- Maximum 1 subsidised ticket per person per show across all non-cancelled bookings
-        SELECT COUNT(*) INTO v_subsidised_count
-        FROM ticket t
-        JOIN booking b ON t.booking_id = b.booking_id
-        WHERE b.user_id = v_buyer_id
-          AND t.show_id = NEW.show_id
-          AND t.attendee_type = NEW.attendee_type
-          AND t.status IN ('HELD', 'ACTIVE')
-          AND t.ticket_id <> COALESCE(NEW.ticket_id, -1);
-
-        IF v_subsidised_count >= 1 THEN
-            RAISE EXCEPTION 'Only one subsidised % ticket is allowed per person per show. Additional tickets must be GUEST.' ,
-                NEW.attendee_type
-                USING ERRCODE = 'P0001';
-        END IF;
-    END IF;
-
     RETURN NEW;
 END;
 $$;
 
-CREATE TRIGGER trg_ticket_limits_and_subsidies
+DROP TRIGGER IF EXISTS trg_ticket_limits_and_subsidies ON ticket;
+CREATE TRIGGER trg_ticket_limits
 BEFORE INSERT OR UPDATE ON ticket
 FOR EACH ROW
-EXECUTE FUNCTION fn_check_ticket_limits_and_subsidies();
+EXECUTE FUNCTION fn_check_ticket_limits();
 
 -- =============================================================
 -- 4. BR7: BOOKING WINDOW VALIDATION

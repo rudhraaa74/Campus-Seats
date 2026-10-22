@@ -92,16 +92,8 @@ export function SeatMap({
         setSelectionError('You can select a maximum of 6 tickets per booking (Rule BR6).');
         return;
       }
-      const userTier = user?.user_type ? user.user_type.toUpperCase() : 'STUDENT';
-      // Under Rule BR14, each attendee gets at most 1 subsidized ticket (STUDENT or FACULTY).
-      // If a subsidized ticket is already selected, additional seats automatically default to GUEST.
-      const hasSubsidized = selectedSeats.some(
-        (s) => (s.attendee_type === 'STUDENT' || s.attendee_type === 'FACULTY')
-      );
-      const defaultType =
-        (userTier === 'STUDENT' || userTier === 'FACULTY')
-          ? (hasSubsidized ? 'GUEST' : userTier)
-          : 'GUEST';
+      // When a student books tickets, all tickets default to Student rate
+      const defaultType = user?.user_type ? user.user_type.toUpperCase() : 'STUDENT';
 
       setSelectedSeats((prev) => [
         ...prev,
@@ -118,18 +110,6 @@ export function SeatMap({
 
   // Change attendee type for a selected seat
   const handleAttendeeTypeChange = (rowLabel, seatNo, newType) => {
-    if (newType === 'STUDENT' || newType === 'FACULTY') {
-      const alreadyHas = selectedSeats.some(
-        (s) => (s.attendee_type === 'STUDENT' || s.attendee_type === 'FACULTY') &&
-               !(s.row_label === rowLabel && s.seat_no === seatNo)
-      );
-      if (alreadyHas) {
-        setSelectionError(
-          `Rule BR14: Only 1 subsidized ${newType} ticket is allowed per person per show. Additional tickets must be GUEST.`
-        );
-        return;
-      }
-    }
     setSelectionError('');
     setSelectedSeats((prev) =>
       prev.map((s) =>
@@ -193,13 +173,6 @@ export function SeatMap({
         if (onRefresh) onRefresh();
       } else if (err.code === 'TICKET_LIMIT') {
         setSelectionError(err.message || 'Maximum 6 tickets allowed per booking.');
-      } else if (err.code === 'SUBSIDY_LIMIT') {
-        setSelectionError(
-          'Campus Rule BR14: You already have a subsidized Student ticket for this show. We have switched your additional tickets to Guest rate so you can proceed.'
-        );
-        setSelectedSeats((prev) =>
-          prev.map((s) => ({ ...s, attendee_type: 'GUEST' }))
-        );
       } else {
         setSelectionError(err.message || 'Failed to hold seats. Please try again.');
       }
@@ -777,15 +750,9 @@ export function SeatMap({
                         <span className="font-bold text-slate-900">
                           Row {s.row_label}, Seat {s.seat_no}
                         </span>
-                        {s.attendee_type === 'STUDENT' || s.attendee_type === 'FACULTY' ? (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800">
-                            Subsidized
-                          </span>
-                        ) : (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold bg-slate-100 text-slate-600">
-                            Guest
-                          </span>
-                        )}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          {s.attendee_type} Rate
+                        </span>
                       </div>
                       <div className="text-[11px] text-slate-500">{s.category_name} Tier</div>
                     </div>
@@ -826,7 +793,7 @@ export function SeatMap({
         <div className="mb-4 flex items-center justify-between text-[11px] text-slate-500 bg-white/70 p-2.5 rounded-xl border border-slate-200">
           <span className="flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-            <span>Campus Rule BR14: 1 subsidized ticket per student; additional tickets are booked at the guest rate.</span>
+            <span>Students book at the student rate for all accompanying attendees (up to 6 tickets per booking).</span>
           </span>
           <span className="font-semibold text-slate-700">Max 6 tickets</span>
         </div>
