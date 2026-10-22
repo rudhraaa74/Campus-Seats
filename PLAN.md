@@ -294,16 +294,16 @@ Owners are suggestions; change them if the team agrees. Phases 5 and 6 run in pa
 **Goal:** an attendee can find a show and see which seats are free.
 
 **Backend (`modules/events`, `modules/shows`)**
-- [ ] `GET /events` with filters (type, genre, club, date range, free-text title) and sorting.
-- [ ] `GET /events/:id` with its shows.
-- [ ] `GET /shows/:id`: show details, venue, price per seat category and attendee type.
-- [ ] `GET /shows/:id/seats`: every seat of the venue with status (free, held, sold) based on live tickets; for a classroom, return `capacity` and `remaining`.
-- [ ] Indexes for the search queries (verify with `EXPLAIN`).
+- [x] `GET /events` with filters (type, genre, club, date range, free-text title) and sorting.
+- [x] `GET /events/:id` with its shows.
+- [x] `GET /shows/:id`: show details, venue, price per seat category and attendee type.
+- [x] `GET /shows/:id/seats`: every seat of the venue with status (free, held, sold) based on live tickets; for a classroom, return `capacity` and `remaining`.
+- [x] Indexes for the search queries (verify with `EXPLAIN`).
 
 **Front end**
-- [ ] `Events.jsx` with search box and filters.
-- [ ] `ShowDetail.jsx` with `PriceTable` and a read-only `SeatMap` (rows and seats, colours for free, held, sold; quantity picker for classrooms).
-- [ ] Re-fetch seat status every few seconds (polling).
+- [x] `Events.jsx` with search box and filters.
+- [x] `ShowDetail.jsx` with `PriceTable` and a read-only `SeatMap` (rows and seats, colours for free, held, sold; quantity picker for classrooms).
+- [x] Re-fetch seat status every few seconds (polling).
 
 **Checkpoint:** filters return correct events; the seat map matches what the database says; a seat held in `psql` shows as held in the UI.
 
@@ -314,31 +314,31 @@ Owners are suggestions; change them if the team agrees. Phases 5 and 6 run in pa
 **Goal:** the core workflow, end to end, with Redis as the timer. This is the main demo workflow, so start it early and review it carefully.
 
 **Backend (`modules/bookings`, `modules/payments`, `redis/`, `jobs/`) — Rudhra**
-- [ ] `POST /bookings` (hold):
+- [x] `POST /bookings` (hold):
   1. run `expire_holds(show_id)` so stale holds do not block seats;
   2. `BEGIN`; insert the PENDING booking with `hold_expires_at = now() + 5 minutes`;
   3. insert the HELD tickets (triggers set price and total, enforce limits);
   4. `COMMIT`;
   5. only then `SET hold:{booking_id} EX 300` in Redis.
   Return the booking and `hold_expires_at`. A unique violation returns `SEAT_TAKEN` and rolls back everything.
-- [ ] `POST /bookings/:id/pay`: in one transaction lock the booking (`SELECT … FOR UPDATE`), check it is PENDING and not expired, insert the payment (simulated gateway reference), set booking CONFIRMED and tickets ACTIVE; then delete the Redis key.
-- [ ] `GET /bookings/:id` and `GET /bookings/mine`.
-- [ ] `redis/holds.js`: `setHold`, `clearHold`, and a subscriber for key-expiry events that calls `expire_holds()` for that booking.
-- [ ] `jobs/expireHolds.js`: node-cron every 30 s calls the no-argument `expire_holds()` (safety net if an event is missed).
-- [ ] Simulated gateway: always succeeds by default, with an option to simulate failure so the failed-attempt path can be shown (every attempt is recorded).
-- [ ] `tests/concurrency/double-booking.js`: fire 20 parallel holds for the same seat, expect exactly one success and 19 `SEAT_TAKEN`.
-- [ ] API tests: hold, pay, pay after expiry, 7th ticket, subsidised ticket rules, classroom capacity.
+- [x] `POST /bookings/:id/pay`: in one transaction lock the booking (`SELECT … FOR UPDATE`), check it is PENDING and not expired, insert the payment (simulated gateway reference), set booking CONFIRMED and tickets ACTIVE; then delete the Redis key.
+- [x] `GET /bookings/:id` and `GET /bookings/mine`.
+- [x] `redis/holds.js`: `setHold`, `clearHold`, and a subscriber for key-expiry events that calls `expire_holds()` for that booking.
+- [x] `jobs/expireHolds.js`: node-cron every 30 s calls the no-argument `expire_holds()` (safety net if an event is missed).
+- [x] Simulated gateway: always succeeds by default, with an option to simulate failure so the failed-attempt path can be shown (every attempt is recorded).
+- [x] `tests/concurrency/double-booking.js`: fire 20 parallel holds for the same seat, expect exactly one success and 19 `SEAT_TAKEN`.
+- [x] API tests: hold, pay, pay after expiry, 7th ticket, subsidised ticket rules, classroom capacity.
 
 **Front end — Rudhra with Pranay**
-- [ ] Seat selection in `SeatMap` (select up to 6, choose attendee type per seat).
-- [ ] `Checkout.jsx` with `CountdownTimer` (uses the server's `hold_expires_at`, not the browser clock) and a pay button.
-- [ ] Friendly handling of "seat just taken" (return to the seat map, refresh seats) and "hold expired".
+- [x] Seat selection in `SeatMap` (select up to 6, choose attendee type per seat).
+- [x] `Checkout.jsx` with `CountdownTimer` (uses the server's `hold_expires_at`, not the browser clock) and a pay button.
+- [x] Friendly handling of "seat just taken" (return to the seat map, refresh seats) and "hold expired".
 
 **Checkpoint (W2 done):**
-- [ ] Happy path: pick seats → hold → pay → tickets active.
-- [ ] Wait 5 minutes (or shorten the hold in a test config) → hold expires, seats become free.
-- [ ] Two browser sessions pick the same seat → exactly one succeeds.
-- [ ] Stopping Redis does not break booking or allow double booking.
+- [x] Happy path: pick seats → hold → pay → tickets active.
+- [x] Wait 5 minutes (or shorten the hold in a test config) → hold expires, seats become free.
+- [x] Two browser sessions pick the same seat → exactly one succeeds.
+- [x] Stopping Redis does not break booking or allow double booking.
 
 ---
 

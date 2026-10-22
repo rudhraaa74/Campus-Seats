@@ -232,10 +232,12 @@ export function ShowDetail() {
         {/* Left Column: Interactive Seat Map (spans 2 cols) */}
         <div className="lg:col-span-2 space-y-6">
           <SeatMap
+            showId={show.show_id}
             venueType={seatData?.venue_type || show.venue?.venue_type}
             venueName={show.venue?.name || show.venue?.venue_name}
             seats={seatData?.seats || []}
             classroomData={seatData}
+            prices={show.prices || []}
             isPolling={isPolling}
             lastUpdated={lastSyncTime}
             onRefresh={fetchSeats}
@@ -246,14 +248,19 @@ export function ShowDetail() {
         <div className="space-y-6">
           <PriceTable prices={show.prices} userType={user?.user_type} />
 
-          <div className="bg-emerald-900 text-white p-6 rounded-2xl shadow-sm space-y-3">
+          <div className="bg-emerald-950 text-white p-6 rounded-2xl shadow-sm space-y-3 border border-emerald-900">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-400" />
-              <h4 className="font-bold text-sm">Booking Opens in Phase 4</h4>
+              <h4 className="font-bold text-sm">5-Minute Seat Hold Guarantee</h4>
             </div>
-            <p className="text-xs text-emerald-100 leading-relaxed">
-              In Phase 4 (starting next), attendees will select seats and click to hold them for 5 minutes with a live countdown timer before completing payment.
+            <p className="text-xs text-emerald-200 leading-relaxed">
+              When you select seats and click to hold, they are locked in PostgreSQL for 5 minutes. No other attendee can book your seats while your timer runs.
             </p>
+            <div className="pt-2 border-t border-emerald-800/80 text-[11px] text-emerald-300 space-y-1">
+              <div>• Max 6 tickets per booking (Rule BR6)</div>
+              <div>• 1 Subsidized ticket per student show (Rule BR14)</div>
+              <div>• Real-time concurrency protection via partial unique indexes</div>
+            </div>
           </div>
         </div>
       </div>

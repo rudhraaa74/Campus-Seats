@@ -5,6 +5,8 @@
 
 import { app } from './app.js';
 import { env } from './config/env.js';
+import { startHoldExpirySubscriber } from './redis/holds.js';
+import { startHoldExpiryCron } from './jobs/expireHolds.js';
 
 const server = app.listen(env.port, () => {
   console.log(`===============================================`);
@@ -12,6 +14,10 @@ const server = app.listen(env.port, () => {
   console.log(`  Environment: ${env.nodeEnv}`);
   console.log(`  Health Check: http://localhost:${env.port}/api/v1/health`);
   console.log(`===============================================`);
+
+  // Initialize Redis hold subscriber & safety-net cron
+  startHoldExpirySubscriber();
+  startHoldExpiryCron();
 });
 
 // Graceful shutdown handling

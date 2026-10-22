@@ -1,10 +1,14 @@
 // ─────────────────────────────────────────────────────────────
 // frontend/src/components/SeatMap.jsx
-// Clean White 500-Seat Curved Auditorium & Classroom Availability Map
-// Preserves original clean UI aesthetics with curved aisles & zoom controls
+// Clean White 500-Seat Straight Auditorium & Classroom Selection Map
+// Interactive seat selection (up to 6 tickets), attendee tier selection,
+// dynamic price calculation, 5-minute hold creation, and live polling.
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
+import { api } from '../api/client.js';
 import {
   Users,
   Info,
@@ -15,38 +19,194 @@ import {
   ZoomOut,
   RotateCcw,
   ShieldCheck,
+  Check,
+  X,
+  CreditCard,
+  AlertCircle,
+  Loader2,
+  Ticket,
 } from 'lucide-react';
 
 export function SeatMap({
+  showId,
   venueType = 'auditorium',
   venueName = '',
   seats = [],
   classroomData = null,
+  prices = [],
   isPolling = false,
   lastUpdated = null,
   onRefresh,
 }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [tierFilter, setTierFilter] = useState('ALL'); // 'ALL' | 'GOLD' | 'SILVER'
   const [hoveredSeat, setHoveredSeat] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(1); // 1 (fit), 1.25, 1.5, 2.0
+  const [selectedSeats, setSelectedSeats] = useState([]); // [{ row_label, seat_no, category_name, attendee_type }]
+  const [selectionError, setSelectionError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Classroom state
+  const [classroomQty, setClassroomQty] = useState(1);
+  const [classroomAttendeeType, setClassroomAttendeeType] = useState(
+    user?.user_type ? user.user_type.toUpperCase() : 'STUDENT'
+  );
+
+  // Helper to calculate price per seat based on category and attendee type
+  const getSeatPrice = (categoryName, attendeeType) => {
+    if (!prices || prices.length === 0) return 0;
+    const cat = prices.find(
+      (p) => p.category_name?.toLowerCase() === categoryName?.toLowerCase()
+    );
+    if (!cat) return 0;
+
+    const type = (attendeeType || 'STUDENT').toUpperCase();
+    if (type === 'STUDENT') return parseFloat(cat.student_price) || 0;
+    if (type === 'FACULTY') return parseFloat(cat.faculty_price) || 0;
+    if (type === 'GUEST') return parseFloat(cat.guest_price) || 0;
+    return parseFloat(cat.student_price) || 0;
+  };
+
+  // Subtotal calculation
+  const estimatedTotal = selectedSeats.reduce((sum, s) => {
+    return sum + getSeatPrice(s.category_name, s.attendee_type);
+  }, 0);
+
+  // Toggle seat selection
+  const handleSeatClick = (seat) => {
+    if (seat.status !== 'free') return;
+    const seatNo = seat.seat_no || seat.seat_number;
+    const isSelected = selectedSeats.some(
+      (s) => s.row_label === seat.row_label && s.seat_no === seatNo
+    );
+
+    if (isSelected) {
+      setSelectedSeats((prev) =>
+        prev.filter((s) => !(s.row_label === seat.row_label && s.seat_no === seatNo))
+      );
+      setSelectionError('');
+    } else {
+      if (selectedSeats.length >= 6) {
+        setSelectionError('You can select a maximum of 6 tickets per booking (Rule BR6).');
+        return;
+      }
+      const defaultType = user?.user_type ? user.user_type.toUpperCase() : 'STUDENT';
+      setSelectedSeats((prev) => [
+        ...prev,
+        {
+          row_label: seat.row_label,
+          seat_no: seatNo,
+          category_name: seat.category_name || (seat.row_label >= 'O' ? 'Gold' : 'Silver'),
+          attendee_type: defaultType,
+        },
+      ]);
+      setSelectionError('');
+    }
+  };
+
+  // Change attendee type for a selected seat
+  const handleAttendeeTypeChange = (rowLabel, seatNo, newType) => {
+    setSelectedSeats((prev) =>
+      prev.map((s) =>
+        s.row_label === rowLabel && s.seat_no === seatNo
+          ? { ...s, attendee_type: newType }
+          : s
+      )
+    );
+  };
+
+  // Remove a seat from selection
+  const handleRemoveSeat = (rowLabel, seatNo) => {
+    setSelectedSeats((prev) =>
+      prev.filter((s) => !(s.row_label === rowLabel && s.seat_no === seatNo))
+    );
+  };
+
+  // Submit hold request to backend
+  const handleCreateHold = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setSelectionError('');
+
+      let payload;
+      if (venueType === 'classroom') {
+        payload = {
+          show_id: showId,
+          ticket_count: classroomQty,
+          tickets: [],
+        };
+      } else {
+        if (selectedSeats.length === 0) {
+          setSelectionError('Please select at least 1 seat before proceeding.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        payload = {
+          show_id: showId,
+          tickets: selectedSeats.map((s) => ({
+            row_label: s.row_label,
+            seat_no: s.seat_no,
+            attendee_type: s.attendee_type,
+          })),
+        };
+      }
+
+      const res = await api.post('/bookings', payload);
+      // Navigate to checkout with the returned booking ID
+      navigate(`/checkout/${res.booking.booking_id}`);
+    } catch (err) {
+      if (err.code === 'SEAT_TAKEN') {
+        setSelectionError(
+          'One or more of your selected seats were just taken by another attendee. Please select different seats.'
+        );
+        if (onRefresh) onRefresh();
+      } else if (err.code === 'TICKET_LIMIT') {
+        setSelectionError(err.message || 'Maximum 6 tickets allowed per booking.');
+      } else if (err.code === 'SUBSIDY_LIMIT') {
+        setSelectionError(err.message || 'You have already used your subsidized ticket for this show.');
+      } else {
+        setSelectionError(err.message || 'Failed to hold seats. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────
   // 1. CLASSROOM VENUE TYPE (General Admission)
+  // ─────────────────────────────────────────────────────────────
   if (venueType === 'classroom') {
     const capacity = classroomData?.capacity || 0;
     const remaining = classroomData?.remaining ?? capacity;
     const booked = classroomData?.booked_count || (capacity - remaining);
     const occupancyPercent = capacity > 0 ? Math.round((booked / capacity) * 100) : 0;
+    const isSoldOut = remaining <= 0;
+
+    const classroomPrice = getSeatPrice('General', classroomAttendeeType);
+    const classroomTotal = classroomPrice * classroomQty;
 
     return (
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
           <div>
             <h3 className="text-lg font-bold text-slate-900">{venueName || 'Lecture Hall'}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">General Admission (No assigned seat numbers)</p>
+            <p className="text-xs text-slate-500 mt-0.5">General Admission (Unreserved Seating)</p>
           </div>
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 font-medium bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
-              <span className={`w-2 h-2 rounded-full ${isPolling ? 'bg-emerald-500 animate-ping' : 'bg-emerald-500'}`}></span>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isPolling ? 'bg-emerald-500 animate-ping' : 'bg-emerald-500'
+                }`}
+              ></span>
               Live Sync
             </span>
             {onRefresh && (
@@ -97,17 +257,99 @@ export function SeatMap({
           </div>
         </div>
 
-        <div className="flex items-start gap-2.5 p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-blue-800">
-          <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-          <span>
-            Classroom events offer unreserved seating. Booking confirms your entry badge, and seats are selected on arrival.
-          </span>
+        {selectionError && (
+          <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+            <span>{selectionError}</span>
+          </div>
+        )}
+
+        {/* Quantity and Booking Card */}
+        <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Select Passes (Max 6)
+              </span>
+              <div className="flex items-center gap-3 mt-2">
+                <button
+                  type="button"
+                  disabled={classroomQty <= 1}
+                  onClick={() => setClassroomQty((prev) => Math.max(1, prev - 1))}
+                  className="w-8 h-8 rounded-lg bg-white border border-slate-300 font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+                >
+                  -
+                </button>
+                <span className="text-lg font-bold text-slate-900 w-8 text-center font-mono">
+                  {classroomQty}
+                </span>
+                <button
+                  type="button"
+                  disabled={classroomQty >= Math.min(6, remaining)}
+                  onClick={() =>
+                    setClassroomQty((prev) => Math.min(6, Math.min(remaining, prev + 1)))
+                  }
+                  className="w-8 h-8 rounded-lg bg-white border border-slate-300 font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Attendee Tier
+              </span>
+              <div className="mt-2">
+                <select
+                  value={classroomAttendeeType}
+                  onChange={(e) => setClassroomAttendeeType(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold bg-white text-slate-800"
+                >
+                  <option value="STUDENT">Student (₹{getSeatPrice('General', 'STUDENT')})</option>
+                  <option value="FACULTY">Faculty (₹{getSeatPrice('General', 'FACULTY')})</option>
+                  <option value="GUEST">Guest (₹{getSeatPrice('General', 'GUEST')})</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <span className="text-xs text-slate-500">Total Price</span>
+              <div className="text-2xl font-extrabold text-slate-900">₹{classroomTotal}</div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={isSoldOut || isSubmitting}
+            onClick={handleCreateHold}
+            className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Reserving Your Passes...
+              </>
+            ) : isSoldOut ? (
+              'Classroom Capacity Full'
+            ) : !user ? (
+              'Log in to Hold Passes'
+            ) : (
+              <>
+                <ShieldCheck className="w-4 h-4" />
+                Hold {classroomQty} {classroomQty === 1 ? 'Pass' : 'Passes'} & Proceed to Pay (₹
+                {classroomTotal})
+              </>
+            )}
+          </button>
         </div>
       </div>
     );
   }
 
-  // 2. AUDITORIUM VENUE TYPE (500 Numbered Seats in Curved Amphitheater)
+  // ─────────────────────────────────────────────────────────────
+  // 2. AUDITORIUM VENUE TYPE (500 Numbered Seats in Straight Horizontal Rows)
+  // ─────────────────────────────────────────────────────────────
   // Group seats by row_label
   const rowsMap = {};
   for (const seat of seats) {
@@ -120,7 +362,9 @@ export function SeatMap({
   // Sort rows alphabetically and seats numerically
   const sortedRowLabels = Object.keys(rowsMap).sort();
   sortedRowLabels.forEach((r) => {
-    rowsMap[r].sort((a, b) => (a.seat_no || a.seat_number) - (b.seat_no || b.seat_number));
+    rowsMap[r].sort(
+      (a, b) => (a.seat_no || a.seat_number) - (b.seat_no || b.seat_number)
+    );
   });
 
   const totalSeats = seats.length;
@@ -129,7 +373,9 @@ export function SeatMap({
   const soldSeats = seats.filter((s) => s.status === 'sold').length;
 
   const goldSeatsCount = seats.filter((s) => s.category_name?.toLowerCase() === 'gold').length;
-  const silverSeatsCount = seats.filter((s) => s.category_name?.toLowerCase() === 'silver').length;
+  const silverSeatsCount = seats.filter(
+    (s) => s.category_name?.toLowerCase() === 'silver'
+  ).length;
 
   const displayedRowLabels = sortedRowLabels.filter((rowLabel) => {
     if (tierFilter === 'ALL') return true;
@@ -158,19 +404,25 @@ export function SeatMap({
       <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-slate-900">{venueName || 'Main Auditorium'} — Live Seat Map</h3>
+            <h3 className="text-lg font-bold text-slate-900">
+              {venueName || 'Main Auditorium'} — Interactive Seating
+            </h3>
             <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
               500 Seats
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            {freeSeats} of {totalSeats} seats currently available
+            Click available green seats to reserve (max 6). Holds lock seats for 5 minutes.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 font-medium bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
-            <span className={`w-2 h-2 rounded-full ${isPolling ? 'bg-emerald-500 animate-ping' : 'bg-emerald-500'}`}></span>
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isPolling ? 'bg-emerald-500 animate-ping' : 'bg-emerald-500'
+              }`}
+            ></span>
             Live Polling Active
           </span>
           {onRefresh && (
@@ -242,7 +494,7 @@ export function SeatMap({
             onClick={handleZoomIn}
             disabled={zoomLevel >= 2}
             className="p-1.5 text-slate-600 hover:text-slate-900 disabled:opacity-40 rounded-lg hover:bg-slate-200/60 transition-colors"
-            title="Zoom in to pick individual seats"
+            title="Zoom in to enlarge seats"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
@@ -258,6 +510,22 @@ export function SeatMap({
         </div>
       </div>
 
+      {/* Error Banner */}
+      {selectionError && (
+        <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <span className="font-bold">Booking Notice:</span> {selectionError}
+          </div>
+          <button
+            onClick={() => setSelectionError('')}
+            className="text-red-400 hover:text-red-600"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Floating Active Seat Inspector Bar */}
       <div className="mb-5 py-2 px-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs text-slate-600 min-h-[36px]">
         <div className="flex items-center gap-2">
@@ -265,37 +533,51 @@ export function SeatMap({
           {hoveredSeat ? (
             (() => {
               const isGold = hoveredSeat.category_name?.toLowerCase() === 'gold';
+              const seatNo = hoveredSeat.seat_no || hoveredSeat.seat_number;
+              const isSelected = selectedSeats.some(
+                (s) => s.row_label === hoveredSeat.row_label && s.seat_no === seatNo
+              );
               return (
                 <span>
-                  Row <strong className="text-slate-900 font-bold">{hoveredSeat.row_label}</strong>, Seat{' '}
-                  <strong className="text-slate-900 font-bold">{hoveredSeat.seat_no || hoveredSeat.seat_number}</strong> •{' '}
+                  Row <strong className="text-slate-900 font-bold">{hoveredSeat.row_label}</strong>
+                  , Seat <strong className="text-slate-900 font-bold">{seatNo}</strong> •{' '}
                   <span className={isGold ? 'text-amber-700 font-bold' : 'text-slate-700 font-bold'}>
                     {isGold ? 'Balcony (Gold Tier)' : 'Stalls (Silver Tier)'}
                   </span>{' '}
                   • Status:{' '}
                   <strong
                     className={
-                      hoveredSeat.status === 'free'
+                      isSelected
+                        ? 'text-emerald-700 font-extrabold'
+                        : hoveredSeat.status === 'free'
                         ? 'text-emerald-600'
                         : hoveredSeat.status === 'held'
                         ? 'text-amber-600'
                         : 'text-slate-400'
                     }
                   >
-                    {hoveredSeat.status === 'free' ? 'Available' : hoveredSeat.status === 'held' ? 'On Hold' : 'Booked'}
+                    {isSelected
+                      ? 'Selected (Click to deselect)'
+                      : hoveredSeat.status === 'free'
+                      ? 'Available (Click to select)'
+                      : hoveredSeat.status === 'held'
+                      ? 'On Hold'
+                      : 'Booked'}
                   </strong>
                 </span>
               );
             })()
           ) : (
             <span className="text-slate-400 italic">
-              Hover any seat to inspect • Use Zoom (+) if you wish to enlarge seats
+              Click any green seat to pick • Up to 6 seats per booking
             </span>
           )}
         </div>
 
         <div className="text-[11px] font-medium text-slate-400 hidden sm:block">
-          {zoomLevel > 1 ? 'Scroll or drag to pan' : 'Compact fit: View all 500 seats without scrolling'}
+          {selectedSeats.length > 0
+            ? `${selectedSeats.length} of 6 seats selected`
+            : 'Compact fit: View all 500 seats without scrolling'}
         </div>
       </div>
 
@@ -306,21 +588,18 @@ export function SeatMap({
           <span>Available ({freeSeats})</span>
         </div>
         <div className="flex items-center gap-2">
+          <span className="w-3.5 h-3.5 rounded-md bg-emerald-700 border-2 border-emerald-300 ring-1 ring-emerald-500 text-white flex items-center justify-center text-[8px] font-bold">
+            ✓
+          </span>
+          <span>Selected ({selectedSeats.length})</span>
+        </div>
+        <div className="flex items-center gap-2">
           <span className="w-3.5 h-3.5 rounded-md bg-amber-400 border border-amber-500 animate-pulse"></span>
           <span>On Hold ({heldSeats})</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3.5 h-3.5 rounded-md bg-slate-300 border border-slate-400"></span>
           <span>Booked ({soldSeats})</span>
-        </div>
-        <div className="h-3 w-px bg-slate-200 hidden sm:block"></div>
-        <div className="flex items-center gap-1.5 text-amber-700">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
-          <span>Gold Balcony: Rows O–T</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-slate-600">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span>
-          <span>Silver Stalls: Rows A–N</span>
         </div>
       </div>
 
@@ -332,7 +611,7 @@ export function SeatMap({
         </span>
       </div>
 
-      {/* Auditorium Seating Grid (Clean White Background) */}
+      {/* Straight Horizontal Seating Grid (Clean White Background) */}
       <div className="overflow-x-auto pb-4 pt-1 transition-all">
         <div
           className="flex flex-col items-center space-y-1.5 transition-transform duration-200 origin-top min-w-max px-2"
@@ -370,30 +649,42 @@ export function SeatMap({
                       const isLeftAisle = seatNo === 7;
                       const isRightAisle = seatNo === 18;
 
-                      let seatColor = 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-xs';
+                      const isSelected = selectedSeats.some(
+                        (s) => s.row_label === rowLabel && s.seat_no === seatNo
+                      );
+
+                      let seatColor =
+                        'bg-emerald-500 hover:bg-emerald-600 text-white shadow-xs cursor-pointer';
                       let statusLabel = 'Available';
 
-                      if (seat.status === 'held') {
-                        seatColor = 'bg-amber-400 text-amber-950 font-bold border border-amber-500 animate-pulse cursor-not-allowed';
+                      if (isSelected) {
+                        seatColor =
+                          'bg-emerald-700 text-white ring-2 ring-emerald-300 font-extrabold shadow-md scale-110 z-10';
+                        statusLabel = 'Selected';
+                      } else if (seat.status === 'held') {
+                        seatColor =
+                          'bg-amber-400 text-amber-950 font-bold border border-amber-500 animate-pulse cursor-not-allowed';
                         statusLabel = 'On Hold';
                       } else if (seat.status === 'sold') {
-                        seatColor = 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed line-through';
+                        seatColor =
+                          'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed line-through';
                         statusLabel = 'Booked';
                       }
 
-                      const tierRing = isGold ? 'ring-1 ring-amber-300' : '';
+                      const tierRing = isGold && !isSelected ? 'ring-1 ring-amber-300' : '';
 
                       return (
                         <React.Fragment key={`${rowLabel}-${seatNo}`}>
                           <button
                             type="button"
                             disabled={seat.status !== 'free'}
+                            onClick={() => handleSeatClick(seat)}
                             onMouseEnter={() => setHoveredSeat(seat)}
                             onMouseLeave={() => setHoveredSeat(null)}
                             title={`Row ${rowLabel}, Seat ${seatNo} (${seat.category_name}) — ${statusLabel}`}
                             className={`w-5 h-5 sm:w-5.5 sm:h-5.5 rounded-md flex items-center justify-center text-[9px] font-semibold transition-all transform hover:scale-125 hover:z-20 ${tierRing} ${seatColor}`}
                           >
-                            {seatNo}
+                            {isSelected ? '✓' : seatNo}
                           </button>
 
                           {/* Aisle Spacer */}
@@ -418,9 +709,110 @@ export function SeatMap({
         </div>
       </div>
 
-      <div className="mt-6 text-center text-xs text-slate-400">
-        Auditorium seats refresh automatically every few seconds. Click zoom in (+) if you wish to enlarge individual seats.
-      </div>
+      {/* ─────────────────────────────────────────────────────────────
+          3. SELECTION SUMMARY & HOLD ACTION DOCK
+         ───────────────────────────────────────────────────────────── */}
+      {selectedSeats.length > 0 && (
+        <div className="mt-8 pt-6 border-t border-slate-200 bg-slate-50/70 p-5 rounded-2xl border">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-emerald-600" />
+                Selected Seats ({selectedSeats.length} / 6)
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Assign attendee tier per seat to apply student subsidy or faculty rates.
+              </p>
+            </div>
+
+            <div className="text-right">
+              <span className="text-xs text-slate-500 font-medium">Estimated Subtotal</span>
+              <div className="text-2xl font-extrabold text-slate-900">₹{estimatedTotal}</div>
+            </div>
+          </div>
+
+          {/* Seat chips and attendee type dropdowns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+            {selectedSeats.map((s) => {
+              const price = getSeatPrice(s.category_name, s.attendee_type);
+              return (
+                <div
+                  key={`${s.row_label}-${s.seat_no}`}
+                  className="bg-white border border-slate-200 p-2.5 rounded-xl flex items-center justify-between shadow-2xs text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-md bg-emerald-600 text-white font-mono font-bold text-[10px] flex items-center justify-center">
+                      {s.row_label}
+                    </span>
+                    <div>
+                      <div className="font-bold text-slate-900">
+                        Row {s.row_label}, Seat {s.seat_no}
+                      </div>
+                      <div className="text-[11px] text-slate-500">{s.category_name} Tier</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={s.attendee_type}
+                      onChange={(e) =>
+                        handleAttendeeTypeChange(s.row_label, s.seat_no, e.target.value)
+                      }
+                      className="px-2 py-1 rounded-md border border-slate-300 text-[11px] font-semibold bg-slate-50 text-slate-800"
+                    >
+                      <option value="STUDENT">Student</option>
+                      <option value="FACULTY">Faculty</option>
+                      <option value="GUEST">Guest</option>
+                    </select>
+
+                    <span className="font-bold text-slate-900 min-w-[36px] text-right">
+                      ₹{price}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSeat(s.row_label, s.seat_no)}
+                      className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-100"
+                      title="Remove seat"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Hold Button */}
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={handleCreateHold}
+            className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Reserving Your Seats in Database...
+              </>
+            ) : !user ? (
+              'Log in to Hold Seats'
+            ) : (
+              <>
+                <ShieldCheck className="w-4 h-4" />
+                Hold {selectedSeats.length} {selectedSeats.length === 1 ? 'Seat' : 'Seats'} & Proceed
+                to Checkout (₹{estimatedTotal})
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {selectedSeats.length === 0 && (
+        <div className="mt-6 text-center text-xs text-slate-400">
+          Click any available green seat above to start your reservation.
+        </div>
+      )}
     </div>
   );
 }

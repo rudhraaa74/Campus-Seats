@@ -11,6 +11,8 @@ import { Login } from './pages/Login.jsx';
 import { Register } from './pages/Register.jsx';
 import { Events } from './pages/Events.jsx';
 import { ShowDetail } from './pages/ShowDetail.jsx';
+import { Checkout } from './pages/Checkout.jsx';
+import { MyBookings } from './pages/MyBookings.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 
 export default function App() {
@@ -33,12 +35,18 @@ export default function App() {
 
               {/* Protected attendee routes */}
               <Route
+                path="/checkout/:id"
+                element={
+                  <ProtectedRoute>
+                    <Checkout />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/my-bookings"
                 element={
                   <ProtectedRoute>
-                    <div className="max-w-7xl mx-auto px-4 py-12 text-center text-slate-600">
-                      My Bookings will be enabled in Phase 4 / Phase 5.
-                    </div>
+                    <MyBookings />
                   </ProtectedRoute>
                 }
               />
