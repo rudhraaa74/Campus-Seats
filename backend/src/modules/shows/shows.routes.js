@@ -15,5 +15,8 @@ router.get('/:id', optionalAuthenticate, showsController.getShowById);
 // GET /api/v1/shows/:id/seats (real-time seat status / remaining slots)
 router.get('/:id/seats', optionalAuthenticate, showsController.getShowSeats);
 
+// GET /api/v1/shows/:id/stream (Server-Sent Events for real-time seat invalidation)
+router.get('/:id/stream', showsController.streamShowUpdates);
+
 export default router;
 

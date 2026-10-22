@@ -75,15 +75,47 @@ export function ShowDetail() {
     }
   }, [id]);
 
-  // Initial seat fetch and polling interval (every 4 seconds)
+  // Initial seat fetch + Live Server-Sent Events (SSE) stream subscription
   useEffect(() => {
     fetchSeats();
-    const interval = setInterval(() => {
-      fetchSeats();
-    }, 4000);
 
-    return () => clearInterval(interval);
-  }, [fetchSeats]);
+    // 1. Establish SSE connection for instant seat invalidation signals
+    let eventSource = null;
+    try {
+      eventSource = new EventSource(`/api/v1/shows/${id}/stream`);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === 'REFRESH') {
+            // Server notified that a hold, pay, or cancellation committed.
+            // Client re-fetches from PostgreSQL to keep DBMS as single source of truth.
+            fetchSeats();
+          }
+        } catch (e) {
+          // ignore non-JSON or heartbeat comments
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        // SSE automatically handles reconnection with exponential backoff
+      };
+    } catch (err) {
+      console.warn('SSE subscription failed, falling back to interval:', err);
+    }
+
+    // 2. Safety net background polling (every 12 seconds) as graceful fallback
+    const fallbackInterval = setInterval(() => {
+      fetchSeats();
+    }, 12000);
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+      clearInterval(fallbackInterval);
+    };
+  }, [id, fetchSeats]);
 
   if (loading) {
     return (

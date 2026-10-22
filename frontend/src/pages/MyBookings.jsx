@@ -22,6 +22,8 @@ import {
   RotateCcw,
   ShieldAlert,
   X,
+  Printer,
+  QrCode,
 } from 'lucide-react';
 
 export function MyBookings() {
@@ -340,10 +342,18 @@ export function MyBookings() {
                     {isConfirmed && (
                       <>
                         <Link
+                          to={`/bookings/${b.booking_id}/ticket`}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 text-xs font-bold transition-all shadow-2xs"
+                          title="Print E-Ticket with QR Code"
+                        >
+                          <QrCode className="w-3.5 h-3.5" />
+                          <span>QR Pass</span>
+                        </Link>
+                        <Link
                           to={`/checkout/${b.booking_id}`}
                           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-sm"
                         >
-                          View E-Ticket
+                          Details
                           <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                         <button

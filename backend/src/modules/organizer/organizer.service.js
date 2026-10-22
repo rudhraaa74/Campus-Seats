@@ -5,6 +5,7 @@
 
 import { withTransaction } from '../../db/transaction.js';
 import * as queries from './organizer.queries.js';
+import { notifyShowUpdated } from '../../events/seatEvents.js';
 
 /**
  * Retrieves all venues with their categories
@@ -287,6 +288,9 @@ export async function cancelShow(showId, userClubIds) {
   }
 
   const updatedShow = await queries.cancelShow(showId);
+
+  // Notify live SSE clients watching this show
+  notifyShowUpdated(showId);
 
   return {
     show: updatedShow,

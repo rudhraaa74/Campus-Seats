@@ -21,6 +21,7 @@ import {
   Loader2,
   Sparkles,
   Ticket,
+  Printer,
 } from 'lucide-react';
 
 export function Checkout() {
@@ -238,6 +239,13 @@ export function Checkout() {
                 className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors"
               >
                 Browse More Events
+              </Link>
+              <Link
+                to={`/bookings/${booking.booking_id}/ticket`}
+                className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold transition-colors shadow-sm inline-flex items-center gap-1.5"
+              >
+                <Printer className="w-4 h-4" />
+                Print E-Ticket (with QR)
               </Link>
               <Link
                 to="/my-bookings"

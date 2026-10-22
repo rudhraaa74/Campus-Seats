@@ -1,12 +1,16 @@
 # ─────────────────────────────────────────────────────────────
 # SeatSync — Docker Compose
 # ─────────────────────────────────────────────────────────────
-# Starts PostgreSQL and Redis for local development.
+# Options:
+#   1. Local Dev (DB + Redis only, recommended for fast coding):
+#      docker compose up -d db redis
+#      ./database/scripts/reset.sh --seed
 #
-# Usage:
-#   cp .env.example .env        # first time only
-#   docker compose up -d        # start services
-#   docker compose down -v      # stop and remove volumes
+#   2. Full Containerized Stack (DB + Redis + Backend + Frontend):
+#      docker compose up --build -d
+#      ./database/scripts/reset.sh --seed
+#
+#   Database initialization is intentionally explicit, not hidden.
 # ─────────────────────────────────────────────────────────────
 
 services:
@@ -42,6 +46,43 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # ── Backend API ─────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-seatsync}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-seatsync_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-seatsync}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-seatsync-super-secret-jwt-key-2026}
+      JWT_EXPIRES_IN: 7d
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Frontend Web (Nginx Static + API Reverse Proxy) ─────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:

@@ -429,7 +429,7 @@ export function SeatMap({
                 isPolling ? 'bg-emerald-500 animate-ping' : 'bg-emerald-500'
               }`}
             ></span>
-            Live Polling Active
+            Live SSE Active
           </span>
           {onRefresh && (
             <button

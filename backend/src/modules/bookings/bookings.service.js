@@ -6,6 +6,7 @@
 import { withTransaction } from '../../db/transaction.js';
 import * as queries from './bookings.queries.js';
 import { setHold, clearHold } from '../../redis/holds.js';
+import { notifyShowUpdated } from '../../events/seatEvents.js';
 
 /**
  * Creates a 5-minute seat hold (PENDING booking + HELD tickets) in a transaction,
@@ -114,6 +115,9 @@ export async function createHold({ userId, userType, showId, tickets = [], ticke
 
   // 3. Set Redis 5-minute hold key ONLY after transaction successfully commits
   await setHold(booking.booking_id, 300);
+
+  // 4. Notify live SSE clients watching this show to refresh their seat map
+  notifyShowUpdated(showId);
 
   return {
     booking: {
@@ -240,6 +244,9 @@ export async function payBooking({ bookingId, userId, paymentMethod = 'UPI', sim
   // 9. Remove Redis hold key now that booking is confirmed
   await clearHold(bookingId);
 
+  // 10. Notify live SSE clients watching this show
+  notifyShowUpdated(result.booking.show_id);
+
   return {
     booking: {
       booking_id: result.booking.booking_id,
@@ -349,6 +356,9 @@ export async function cancelBooking(bookingId, userId, userClubIds = []) {
 
   // Clear Redis hold key if it was pending
   await clearHold(bookingId);
+
+  // Notify live SSE clients watching this show
+  notifyShowUpdated(booking.show_id);
 
   // Fetch updated booking with refreshed tickets & payment
   const fullBooking = await queries.getBookingById(bookingId);

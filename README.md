@@ -12,7 +12,7 @@ DBMS Course Project · Full-stack Database Application · Final Submission
 [![Postman](https://img.shields.io/badge/Postman-FF6C37?style=for-the-badge&logo=postman&logoColor=white)](https://www.postman.com/)
 
 > **Status: Complete & Production-Ready.** All 7 project phases fully implemented, tested, and verified. 
-> Includes a **1,199-record seed dataset** across 15 relations, 100% green automated test suites (64/64 Jest API & concurrency tests, 5/5 database constraint tests), and a live constraint enforcement demonstration.
+> Includes a **1,199-record seed dataset** across 15 relations, 100% green automated test suites (65/65 Jest API & concurrency tests across 7 suites, 5/5 database constraint tests), and a live constraint enforcement demonstration.
 
 ---
 
@@ -140,6 +140,14 @@ SeatSync models **15 relational tables**:
 - **DBMS Implementation:** Non-trivial SQL queries with aggregations, `GROUP BY`, `HAVING`, and window functions leveraging views `v_show_occupancy` and `v_event_revenue`.
 - **Endpoints:** `GET /api/v1/reports/occupancy`, `GET /api/v1/reports/revenue`, `GET /api/v1/reports/top-events`.
 
+### Real-Time Live Seat Updates (Server-Sent Events)
+- **Action:** When any attendee holds a seat, completes payment, cancels, or when background hold-expiry sweeps run, watching clients immediately see the updated availability.
+- **DBMS Implementation:** The server emits a lightweight `{ type: "REFRESH" }` SSE signal to `GET /api/v1/shows/:id/stream`. Clients immediately re-query the PostgreSQL seat endpoint (`/api/v1/shows/:id/seats`). **Zero seat diffs are transmitted**, ensuring PostgreSQL remains the single source of truth without complex client-side state divergence.
+
+### Print-Friendly Campus E-Ticket with QR Code
+- **Action:** Attendees can view and print official campus admission passes with scannable QR verification.
+- **DBMS Implementation:** Available at `/bookings/:id/ticket` (and `/tickets/:id`). Formats a high-contrast, `@media print`-optimized ticket view with SVG QR codes encoding the verified `ticket_id`, `booking_id`, and show metadata. **Strictly adheres to the core DBMS schema** without introducing extraneous columns or artificial check-in states.
+
 ---
 
 ---
@@ -204,48 +212,48 @@ cp frontend/.env.example frontend/.env
 ```
 *(The default configurations map PostgreSQL to port `5433` and Redis to port `6380` so they never conflict with any locally installed default Postgres or Redis services).*
 
-#### Step 3: Start Database & Redis Services
-```bash
-docker compose up -d
-```
-Verify that both containers are running and healthy:
-```bash
-docker compose ps
-```
-*Expected: `campus-seats-db-1` (port 5433) and `campus-seats-redis-1` (port 6380) running.*
+#### Step 3: Choose Your Running Mode
 
-#### Step 4: Install Dependencies
-Run the root setup command (or install backend and frontend separately):
+You can run the project in either of two modes:
+
+##### Option A: Standard Local Development (Recommended for Coding & Tests)
+Run PostgreSQL and Redis in Docker, and run the backend/frontend directly with Node:
 ```bash
-# One-command install for both backend and frontend:
+# Start DB and Redis containers
+docker compose up -d db redis
+
+# Install Node dependencies
 npm run setup
 
-# Or manually:
-cd backend && npm install && cd ..
-cd frontend && npm install && cd ..
+# Explicitly initialize schema & seed 1,200 records:
+./database/scripts/reset.sh --seed
+# (Or: npm run db:reset)
 ```
 
-#### Step 5: Initialize Schema & Seed 1,200 Records
-Run the automated schema application and seed generator:
+##### Option B: Full Containerized Stack (Single Command)
+Build and run the entire stack (PostgreSQL + Redis + Backend API image + Frontend static Nginx reverse proxy):
 ```bash
+# Build and start all 4 services
+docker compose up --build -d
+
+# Explicitly initialize schema & seed 1,200 records (against exposed port 5433):
 ./database/scripts/reset.sh --seed
-# Or: npm run db:reset
 ```
-This executes all 6 DDL migrations (extensions, tables, indexes, functions, triggers, views) and executes `generate_seed.js` to create **1,199 production records** across all 15 tables.
+> **Note on Database Initialization:** Initialization is kept **intentionally explicit, not hidden** inside background entrypoints. This guarantees total transparency for DBMS evaluation: schema creation, constraints, triggers, and seed records remain auditable, reproducible, and under developer control.
 
 ---
 
 ### 3. Testing & Verification
 
-Before launching the servers, verify that the database constraints and APIs pass 100% of their test suites:
+Before launching the servers or presenting in the viva, verify that the database constraints and APIs pass 100% of their test suites:
 
 #### A. Backend Integration & Concurrency Tests (Jest)
 ```bash
 npm run test
 # Or: cd backend && npm test
 ```
-**Expected:** `6 passed, 6 total` suites, **`64 passed, 64 total`** tests.
-Tests auth flows, seat hold expiration, double-booking race conditions, payment verification, and organizer reports.
+**Expected:** `7 passed, 7 total` suites, **`65 passed, 65 total`** tests.
+Tests auth flows, seat hold expiration, double-booking race conditions, classroom capacity concurrency locks, payment verification, and organizer reports.
 
 #### B. Database Rule Violation Tests (SQL)
 ```bash
@@ -264,9 +272,9 @@ Live demonstration of PostgreSQL error messages for double-booking (BR1), show o
 
 ---
 
-### 4. Running the Application Locally
+### 4. Running the Application Locally (Option A)
 
-Start the backend API and frontend Vite servers in separate terminal tabs:
+If running in Option A (Local Dev), start the backend API and frontend Vite servers in separate terminal tabs:
 
 #### Terminal 1 — Backend API Server
 ```bash
@@ -283,7 +291,7 @@ npm run dev:frontend
 ```
 - Client Application: **`http://localhost:5173`**
 
-Open **`http://localhost:5173`** in your browser.
+Open **`http://localhost:5173`** in your browser. (If using Option B, the Nginx container serves this same port `5173` automatically).
 
 ---
 

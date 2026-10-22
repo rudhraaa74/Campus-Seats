@@ -13,6 +13,7 @@ import { Events } from './pages/Events.jsx';
 import { ShowDetail } from './pages/ShowDetail.jsx';
 import { Checkout } from './pages/Checkout.jsx';
 import { MyBookings } from './pages/MyBookings.jsx';
+import { TicketPrint } from './pages/TicketPrint.jsx';
 import { OrganizerDashboard } from './pages/organizer/OrganizerDashboard.jsx';
 import { ReportsDashboard } from './pages/organizer/ReportsDashboard.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
@@ -49,6 +50,22 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <MyBookings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/bookings/:id/ticket"
+                element={
+                  <ProtectedRoute>
+                    <TicketPrint />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tickets/:id"
+                element={
+                  <ProtectedRoute>
+                    <TicketPrint />
                   </ProtectedRoute>
                 }
               />
