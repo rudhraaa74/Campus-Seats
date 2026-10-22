@@ -10,6 +10,7 @@ import { Navbar } from './components/Navbar.jsx';
 import { Login } from './pages/Login.jsx';
 import { Register } from './pages/Register.jsx';
 import { Events } from './pages/Events.jsx';
+import { ShowDetail } from './pages/ShowDetail.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 
 export default function App() {
@@ -23,6 +24,8 @@ export default function App() {
               {/* Public browsing routes */}
               <Route path="/" element={<Events />} />
               <Route path="/events" element={<Events />} />
+              <Route path="/events/:id" element={<ShowDetail />} />
+              <Route path="/shows/:id" element={<ShowDetail />} />
 
               {/* Authentication routes */}
               <Route path="/login" element={<Login />} />

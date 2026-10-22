@@ -5,6 +5,8 @@
 
 import { Router } from 'express';
 import authRoutes from '../modules/auth/auth.routes.js';
+import eventsRoutes from '../modules/events/events.routes.js';
+import showsRoutes from '../modules/shows/shows.routes.js';
 import { pool } from '../db/pool.js';
 import { redis } from '../redis/client.js';
 
@@ -12,6 +14,9 @@ const router = Router();
 
 // Module Routes
 router.use('/auth', authRoutes);
+router.use('/events', eventsRoutes);
+router.use('/shows', showsRoutes);
+
 
 // System Health Check Endpoint
 router.get('/health', async (req, res) => {

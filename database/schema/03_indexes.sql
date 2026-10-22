@@ -63,3 +63,12 @@ ON booking (user_id);
 CREATE INDEX idx_booking_status_expiry
 ON booking (status, hold_expires_at)
 WHERE status = 'PENDING';
+
+-- Index for event filtering by organizing club
+CREATE INDEX idx_event_club
+ON event (club_id);
+
+-- Index for event filtering by category/type
+CREATE INDEX idx_event_type
+ON event (event_type);
+
