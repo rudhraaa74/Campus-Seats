@@ -9,7 +9,7 @@ import { pool } from '../../db/pool.js';
  * Builds and executes dynamic query to list events with filters, search, and pagination.
  * Computes next upcoming show timestamp and total active shows count per event.
  */
-export async function getEventsList({ type, club_id, from, to, q, sort, limit = 20, offset = 0 }) {
+export async function getEventsList({ type, club_id, from, to, q, sort, limit = 20, offset = 0, audienceUserType }) {
   const conditions = [];
   const params = [];
   let paramIdx = 1;
@@ -30,6 +30,23 @@ export async function getEventsList({ type, club_id, from, to, q, sort, limit = 
   if (q && q.trim()) {
     conditions.push(`(e.title ILIKE $${paramIdx} OR e.description ILIKE $${paramIdx})`);
     params.push(`%${q.trim()}%`);
+    paramIdx++;
+  }
+
+  // Audience restriction filter
+  let audParamIdx = null;
+  if (audienceUserType) {
+    audParamIdx = paramIdx;
+    conditions.push(`(
+      NOT EXISTS (SELECT 1 FROM show s_all WHERE s_all.event_id = e.event_id AND s_all.status <> 'CANCELLED')
+      OR EXISTS (
+        SELECT 1 FROM show s_aud 
+        WHERE s_aud.event_id = e.event_id 
+          AND s_aud.status <> 'CANCELLED' 
+          AND ($${paramIdx} = ANY(s_aud.allowed_attendees) OR s_aud.allowed_attendees IS NULL)
+      )
+    )`);
+    params.push(audienceUserType.toUpperCase());
     paramIdx++;
   }
 
@@ -64,6 +81,10 @@ export async function getEventsList({ type, club_id, from, to, q, sort, limit = 
     orderByClause = 'ORDER BY e.title ASC';
   }
 
+  const showAudFilter = audParamIdx
+    ? `AND ($${audParamIdx} = ANY(s.allowed_attendees) OR s.allowed_attendees IS NULL)`
+    : '';
+
   const query = `
     SELECT 
       e.event_id,
@@ -74,11 +95,34 @@ export async function getEventsList({ type, club_id, from, to, q, sort, limit = 
       e.duration_min,
       c.club_id,
       c.name AS club_name,
-      MIN(s.start_time) FILTER (WHERE s.start_time >= CURRENT_TIMESTAMP AND s.status <> 'CANCELLED') AS next_show_at,
-      COUNT(DISTINCT s.show_id) FILTER (WHERE s.status <> 'CANCELLED')::int AS shows_count
+      MIN(s.start_time) FILTER (WHERE s.start_time >= CURRENT_TIMESTAMP AND s.status <> 'CANCELLED' ${showAudFilter}) AS next_show_at,
+      (ARRAY_AGG(s.show_id ORDER BY s.start_time ASC) FILTER (WHERE s.start_time >= CURRENT_TIMESTAMP AND s.status <> 'CANCELLED' ${showAudFilter}))[1] AS next_show_id,
+      (ARRAY_AGG(s.show_id ORDER BY s.start_time DESC) FILTER (WHERE s.status <> 'CANCELLED' ${showAudFilter}))[1] AS latest_show_id,
+      COUNT(DISTINCT s.show_id) FILTER (WHERE s.status <> 'CANCELLED' ${showAudFilter})::int AS shows_count,
+      COALESCE(
+        json_agg(DISTINCT s.allowed_attendees) FILTER (WHERE s.status <> 'CANCELLED' AND s.allowed_attendees IS NOT NULL),
+        '[]'
+      ) AS allowed_attendees_list,
+      COALESCE(
+        json_agg(
+          json_build_object(
+            'show_id', s.show_id,
+            'start_time', s.start_time,
+            'end_time', s.end_time,
+            'status', s.status,
+            'allowed_attendees', s.allowed_attendees,
+            'venue_id', v.venue_id,
+            'venue_name', v.name,
+            'venue_type', LOWER(v.venue_type),
+            'capacity', v.capacity
+          ) ORDER BY s.start_time ASC
+        ) FILTER (WHERE s.show_id IS NOT NULL AND s.status <> 'CANCELLED' ${showAudFilter}),
+        '[]'
+      ) AS shows
     FROM event e
     JOIN club c ON e.club_id = c.club_id
     LEFT JOIN show s ON e.event_id = s.event_id
+    LEFT JOIN venue v ON s.venue_id = v.venue_id
     ${whereClause}
     GROUP BY e.event_id, c.club_id, c.name
     ${orderByClause}
@@ -93,7 +137,7 @@ export async function getEventsList({ type, club_id, from, to, q, sort, limit = 
 /**
  * Counts total matching events for pagination calculation
  */
-export async function getEventsCount({ type, club_id, from, to, q }) {
+export async function getEventsCount({ type, club_id, from, to, q, audienceUserType }) {
   const conditions = [];
   const params = [];
   let paramIdx = 1;
@@ -111,6 +155,20 @@ export async function getEventsCount({ type, club_id, from, to, q }) {
   if (q && q.trim()) {
     conditions.push(`(e.title ILIKE $${paramIdx} OR e.description ILIKE $${paramIdx})`);
     params.push(`%${q.trim()}%`);
+    paramIdx++;
+  }
+
+  if (audienceUserType) {
+    conditions.push(`(
+      NOT EXISTS (SELECT 1 FROM show s_all WHERE s_all.event_id = e.event_id AND s_all.status <> 'CANCELLED')
+      OR EXISTS (
+        SELECT 1 FROM show s_aud 
+        WHERE s_aud.event_id = e.event_id 
+          AND s_aud.status <> 'CANCELLED' 
+          AND ($${paramIdx} = ANY(s_aud.allowed_attendees) OR s_aud.allowed_attendees IS NULL)
+      )
+    )`);
+    params.push(audienceUserType.toUpperCase());
     paramIdx++;
   }
 
@@ -173,13 +231,21 @@ export async function getEventById(eventId) {
 /**
  * Retrieves all upcoming and scheduled shows for an event with venue info
  */
-export async function getShowsByEventId(eventId) {
+export async function getShowsByEventId(eventId, audienceUserType = null) {
+  const params = [eventId];
+  let audienceCondition = '';
+  if (audienceUserType) {
+    audienceCondition = `AND ($2::text = ANY(s.allowed_attendees) OR s.allowed_attendees IS NULL)`;
+    params.push(audienceUserType.toUpperCase());
+  }
+
   const query = `
     SELECT 
       s.show_id,
       s.start_time,
       s.end_time,
       s.status,
+      s.allowed_attendees,
       v.venue_id,
       v.name AS venue_name,
       LOWER(v.venue_type) AS venue_type,
@@ -188,9 +254,10 @@ export async function getShowsByEventId(eventId) {
     JOIN venue v ON s.venue_id = v.venue_id
     WHERE s.event_id = $1
       AND s.status <> 'CANCELLED'
+      ${audienceCondition}
     ORDER BY s.start_time ASC;
   `;
-  const result = await pool.query(query, [eventId]);
+  const result = await pool.query(query, params);
   return result.rows;
 }
 

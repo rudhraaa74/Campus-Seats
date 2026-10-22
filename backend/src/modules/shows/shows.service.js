@@ -4,17 +4,51 @@
 // ─────────────────────────────────────────────────────────────
 
 import * as queries from './shows.queries.js';
+import { getShowsByEventId } from '../events/events.queries.js';
 
 /**
  * Retrieves show details, event, venue, and structured price matrix
  */
-export async function getShowDetail(showId) {
-  const show = await queries.getShowById(showId);
+export async function getShowDetail(showId, user = null) {
+  let show = await queries.getShowById(showId);
+  if (!show) {
+    // Graceful fallback: check if showId was passed as an event_id
+    const fallbackShows = await getShowsByEventId(showId);
+    if (fallbackShows && fallbackShows.length > 0) {
+      show = await queries.getShowById(fallbackShows[0].show_id);
+    }
+  }
+
   if (!show) {
     const error = new Error('Show not found.');
     error.status = 404;
     error.code = 'NOT_FOUND';
     throw error;
+  }
+
+  showId = show.show_id;
+
+  // Audience restriction check
+  const allowed = show.allowed_attendees || ['STUDENT', 'FACULTY', 'GUEST'];
+  const isManagerOfClub = user?.clubIds && user.clubIds.includes(show.club_id);
+
+  if (!isManagerOfClub) {
+    if (user && user.userType) {
+      if (!allowed.includes(user.userType.toUpperCase())) {
+        const error = new Error(`This show is restricted exclusively to ${allowed.join(', ')} attendees.`);
+        error.status = 403;
+        error.code = 'AUDIENCE_RESTRICTED';
+        throw error;
+      }
+    } else {
+      // Unauthenticated visitor
+      if (!allowed.includes('GUEST')) {
+        const error = new Error(`This show is restricted to campus members (${allowed.join(', ')}). Please log in to view.`);
+        error.status = 403;
+        error.code = 'AUDIENCE_RESTRICTED';
+        throw error;
+      }
+    }
   }
 
   const rawPrices = await queries.getShowPrices(showId);
@@ -64,6 +98,7 @@ export async function getShowDetail(showId) {
       start_time: show.start_time,
       end_time: show.end_time,
       status: show.status,
+      allowed_attendees: allowed,
       prices,
     },
   };
@@ -73,17 +108,48 @@ export async function getShowDetail(showId) {
  * Retrieves live seat availability for a show.
  * Enforces hold expiration prior to reading live tickets.
  */
-export async function getShowSeats(showId) {
+export async function getShowSeats(showId, user = null) {
+  let show = await queries.getShowById(showId);
+  if (!show) {
+    // Graceful fallback: check if showId was passed as an event_id
+    const fallbackShows = await getShowsByEventId(showId);
+    if (fallbackShows && fallbackShows.length > 0) {
+      showId = fallbackShows[0].show_id;
+      show = await queries.getShowById(showId);
+    }
+  }
+
   // Step 1: Run expire_holds(show_id) so stale holds do not block seats
   await queries.expireHoldsForShow(showId);
 
-  // Step 2: Retrieve show & venue details
-  const show = await queries.getShowById(showId);
+  // Step 2: Validate show exists
   if (!show) {
     const error = new Error('Show not found.');
     error.status = 404;
     error.code = 'NOT_FOUND';
     throw error;
+  }
+
+  // Audience restriction check
+  const allowed = show.allowed_attendees || ['STUDENT', 'FACULTY', 'GUEST'];
+  const isManagerOfClub = user?.clubIds && user.clubIds.includes(show.club_id);
+
+  if (!isManagerOfClub) {
+    if (user && user.userType) {
+      if (!allowed.includes(user.userType.toUpperCase())) {
+        const error = new Error(`This show is restricted exclusively to ${allowed.join(', ')} attendees.`);
+        error.status = 403;
+        error.code = 'AUDIENCE_RESTRICTED';
+        throw error;
+      }
+    } else {
+      if (!allowed.includes('GUEST')) {
+        const error = new Error(`This show is restricted to campus members (${allowed.join(', ')}). Please log in to view.`);
+        error.status = 403;
+        error.code = 'AUDIENCE_RESTRICTED';
+        throw error;
+      }
+    }
   }
 
   // Step 3: Handle Auditorium vs Classroom venue types

@@ -170,6 +170,65 @@
           }
         },
         {
+          "name": "Create Classroom Hold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"show_id\": 3,\n  \"ticket_count\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings"]
+            }
+          }
+        },
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/mine",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "mine"]
+            }
+          }
+        },
+        {
+          "name": "Get Booking Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "1"]
+            }
+          }
+        },
+        {
           "name": "Pay Booking",
           "request": {
             "method": "POST",
@@ -217,6 +276,23 @@
       "name": "Organizer",
       "item": [
         {
+          "name": "List Organizer Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizer/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizer", "events"]
+            }
+          }
+        },
+        {
           "name": "Create Event",
           "request": {
             "method": "POST",
@@ -242,6 +318,65 @@
           }
         },
         {
+          "name": "List Organizer Shows",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizer/shows",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizer", "shows"]
+            }
+          }
+        },
+        {
+          "name": "List Venues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizer/venues",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizer", "venues"]
+            }
+          }
+        },
+        {
+          "name": "Create Classroom Venue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_number\": \"LT-4\",\n  \"capacity\": 80\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizer/venues/classroom",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizer", "venues", "classroom"]
+            }
+          }
+        },
+        {
           "name": "Create Show",
           "request": {
             "method": "POST",
@@ -257,7 +392,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"event_id\": 1,\n  \"venue_id\": 1,\n  \"start_time\": \"2026-11-01T18:00:00Z\",\n  \"end_time\": \"2026-11-01T21:00:00Z\"\n}"
+              "raw": "{\n  \"event_id\": 1,\n  \"venue_id\": 1,\n  \"venue_type\": \"auditorium\",\n  \"allowed_attendees\": \"ALL\",\n  \"start_time\": \"2026-11-20T18:00:00Z\",\n  \"end_time\": \"2026-11-20T21:00:00Z\",\n  \"prices\": [\n    { \"category_id\": 1, \"student_price\": 100, \"faculty_price\": 150, \"guest_price\": 200 },\n    { \"category_id\": 2, \"student_price\": 150, \"faculty_price\": 200, \"guest_price\": 300 }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/organizer/shows",

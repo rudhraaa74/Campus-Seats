@@ -8,10 +8,21 @@ import * as queries from './events.queries.js';
 /**
  * List events with search query, filters, sorting, and pagination
  */
-export async function listEvents({ type, club_id, from, to, q, sort, page = 1, limit = 20 }) {
+export async function listEvents({ type, club_id, from, to, q, sort, page = 1, limit = 20, audience, user }) {
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 20));
   const offset = (pageNum - 1) * limitNum;
+
+  // Determine audience filtering:
+  // If user is a club manager and not explicitly filtering, they can see all events.
+  // Otherwise, filter by the user's role (STUDENT, FACULTY, or GUEST).
+  const isClubManager = user?.clubIds && user.clubIds.length > 0;
+  let audienceUserType = null;
+  if (!isClubManager) {
+    audienceUserType = (user?.userType || 'GUEST').toUpperCase();
+  } else if (audience && audience !== 'ALL') {
+    audienceUserType = audience.toUpperCase();
+  }
 
   const [events, total] = await Promise.all([
     queries.getEventsList({
@@ -23,6 +34,7 @@ export async function listEvents({ type, club_id, from, to, q, sort, page = 1, l
       sort,
       limit: limitNum,
       offset,
+      audienceUserType,
     }),
     queries.getEventsCount({
       type,
@@ -30,6 +42,7 @@ export async function listEvents({ type, club_id, from, to, q, sort, page = 1, l
       from,
       to,
       q,
+      audienceUserType,
     }),
   ]);
 
@@ -47,7 +60,7 @@ export async function listEvents({ type, club_id, from, to, q, sort, page = 1, l
 /**
  * Get detailed event record with its scheduled shows
  */
-export async function getEventDetail(eventId) {
+export async function getEventDetail(eventId, user = null) {
   const event = await queries.getEventById(eventId);
   if (!event) {
     const error = new Error('Event not found.');
@@ -56,7 +69,10 @@ export async function getEventDetail(eventId) {
     throw error;
   }
 
-  const shows = await queries.getShowsByEventId(eventId);
+  const isClubManager = user?.clubIds && user.clubIds.includes(event.club_id);
+  const audienceUserType = isClubManager ? null : (user?.userType || 'GUEST').toUpperCase();
+
+  const shows = await queries.getShowsByEventId(eventId, audienceUserType);
 
   return {
     event: {

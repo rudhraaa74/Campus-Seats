@@ -348,6 +348,72 @@ Every error response follows this shape:
 | `ALREADY_PAID` | 409 | Booking is already confirmed |
 | `PAYMENT_FAILED` | 422 | Simulated payment failure |
 
+### `GET /bookings/mine`
+
+**Response (200):**
+```json
+{
+  "bookings": [
+    {
+      "booking_id": 100,
+      "show_id": 1,
+      "event_title": "Oasis Cultural Night",
+      "venue_name": "Main Auditorium",
+      "venue_type": "auditorium",
+      "start_time": "2026-11-10T18:00:00.000Z",
+      "end_time": "2026-11-10T21:00:00.000Z",
+      "status": "CONFIRMED",
+      "total_amount": "300.00",
+      "booked_at": "2026-10-22T17:00:00.000Z",
+      "payment_status": "SUCCESS",
+      "payment_method": "CREDIT_CARD",
+      "tickets": [
+        {
+          "ticket_id": 501,
+          "row_label": "E",
+          "seat_no": 1,
+          "attendee_type": "STUDENT",
+          "price_paid": "150.00",
+          "status": "ACTIVE"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### `GET /bookings/:id`
+
+**Response (200):**
+```json
+{
+  "booking": {
+    "booking_id": 100,
+    "user_id": 2,
+    "show_id": 1,
+    "event_title": "Oasis Cultural Night",
+    "venue_name": "Main Auditorium",
+    "venue_type": "auditorium",
+    "start_time": "2026-11-10T18:00:00.000Z",
+    "end_time": "2026-11-10T21:00:00.000Z",
+    "status": "PENDING",
+    "hold_expires_at": "2026-10-22T17:05:00.000Z",
+    "total_amount": "300.00",
+    "seconds_remaining": 240,
+    "tickets": [
+      {
+        "ticket_id": 501,
+        "row_label": "E",
+        "seat_no": 1,
+        "attendee_type": "STUDENT",
+        "price_paid": "150.00",
+        "status": "HELD"
+      }
+    ]
+  }
+}
+```
+
 ### `DELETE /bookings/:id`
 
 **Response (200):**
@@ -375,49 +441,163 @@ Every error response follows this shape:
 
 | Method | Path | Auth | Description | Workflow |
 |---|---|---|---|---|
+| `GET` | `/organizer/events` | Manager | List club events | W4 |
 | `POST` | `/organizer/events` | Manager | Create an event | W4 |
 | `PUT` | `/organizer/events/:id` | Manager | Update an event | W4 |
-| `POST` | `/organizer/shows` | Manager | Schedule a show | W4 |
-| `POST` | `/organizer/shows/:id/cancel` | Manager | Cancel a show | W4 |
+| `GET` | `/organizer/shows` | Manager | List club scheduled shows | W4 |
+| `POST` | `/organizer/shows` | Manager | Schedule a show (auditorium or classroom) | W4 |
+| `POST` | `/organizer/shows/:id/cancel` | Manager | Cancel a show (cascades refunds & cancellations) | W4 |
 | `PUT` | `/organizer/shows/:id/prices` | Manager | Set the price grid | W4 |
 | `GET` | `/organizer/venues` | Manager | List venues and categories | W4 |
+| `POST` | `/organizer/venues/classroom` | Manager | Create or register a classroom venue | W4 |
+
+### `GET /organizer/events`
+
+**Response (200):**
+```json
+{
+  "events": [
+    {
+      "event_id": 1,
+      "club_id": 1,
+      "club_name": "Music Society",
+      "title": "Acoustic Unplugged",
+      "event_type": "MUSIC",
+      "duration_min": 120,
+      "description": "Live acoustic performances"
+    }
+  ]
+}
+```
 
 ### `POST /organizer/events`
 
 **Request:**
 ```json
 {
+  "club_id": 1,
   "title": "Stand-up Night",
   "description": "An evening of comedy",
-  "type": "comedy",
-  "genre": "stand-up"
+  "event_type": "COMEDY",
+  "duration_min": 90
 }
 ```
 
 **Response (201):**
 ```json
 {
-  "event": { "event_id": 1, "title": "Stand-up Night", ... }
+  "event": {
+    "event_id": 1,
+    "club_id": 1,
+    "title": "Stand-up Night",
+    "event_type": "COMEDY",
+    "duration_min": 90,
+    "description": "An evening of comedy"
+  }
+}
+```
+
+### `GET /organizer/shows`
+
+**Response (200):**
+```json
+{
+  "shows": [
+    {
+      "show_id": 1,
+      "event_id": 1,
+      "event_title": "Acoustic Unplugged",
+      "venue_id": 1,
+      "venue_name": "Main Auditorium",
+      "venue_type": "auditorium",
+      "start_time": "2026-11-10T18:00:00.000Z",
+      "end_time": "2026-11-10T21:00:00.000Z",
+      "status": "SCHEDULED",
+      "allowed_attendees": "ALL",
+      "tickets_sold": 28,
+      "capacity": 500
+    }
+  ]
+}
+```
+
+### `POST /organizer/venues/classroom`
+
+**Request:**
+```json
+{
+  "room_number": "LT-4",
+  "capacity": 80
+}
+```
+
+**Response (201):**
+```json
+{
+  "venue": {
+    "venue_id": 5,
+    "name": "Classroom LT-4",
+    "venue_type": "classroom",
+    "capacity": 80
+  }
 }
 ```
 
 ### `POST /organizer/shows`
 
-**Request:**
+**Request (Auditorium Show):**
 ```json
 {
   "event_id": 1,
   "venue_id": 1,
-  "start_time": "2026-11-01T18:00:00Z",
-  "end_time": "2026-11-01T20:00:00Z"
+  "venue_type": "auditorium",
+  "allowed_attendees": "ALL",
+  "start_time": "2026-11-20T18:00:00.000Z",
+  "end_time": "2026-11-20T21:00:00.000Z",
+  "prices": [
+    { "category_id": 1, "student_price": 100, "faculty_price": 150, "guest_price": 200 },
+    { "category_id": 2, "student_price": 150, "faculty_price": 200, "guest_price": 300 }
+  ]
+}
+```
+
+**Request (Classroom Show with on-the-fly room selection):**
+```json
+{
+  "event_id": 1,
+  "venue_type": "classroom",
+  "room_number": "Room 302",
+  "capacity": 60,
+  "allowed_attendees": "STUDENT_ONLY",
+  "start_time": "2026-11-22T14:00:00.000Z",
+  "end_time": "2026-11-22T16:00:00.000Z",
+  "base_price": 50
+}
+```
+
+> `allowed_attendees` supports: `ALL`, `STUDENT_ONLY`, `FACULTY_ONLY`, `STUDENT_FACULTY`.
+> If `STUDENT_ONLY`, only authenticated students can see and book the show.
+
+**Response (201):**
+```json
+{
+  "show": {
+    "show_id": 15,
+    "event_id": 1,
+    "venue_id": 5,
+    "start_time": "2026-11-22T14:00:00.000Z",
+    "end_time": "2026-11-22T16:00:00.000Z",
+    "status": "SCHEDULED",
+    "allowed_attendees": "STUDENT_ONLY"
+  }
 }
 ```
 
 **Errors:**
 | Code | HTTP | When |
 |---|---|---|
-| `VENUE_BUSY` | 409 | Another show overlaps in this venue |
-| `INVALID_VALUE` | 422 | End before start, show outside event dates, etc. |
+| `VENUE_BUSY` | 409 | Another show overlaps in this venue (BR2 GiST EXCLUDE) |
+| `INVALID_VALUE` | 422 | End before start, missing capacity or prices, etc. |
 
 ### `PUT /organizer/shows/:id/prices`
 
@@ -436,7 +616,7 @@ Every error response follows this shape:
 **Response (200):**
 ```json
 {
-  "show": { "show_id": 10, "status": "cancelled" },
+  "show": { "show_id": 10, "status": "CANCELLED" },
   "cancelled_bookings": 5
 }
 ```

@@ -46,6 +46,9 @@ if [ "${1:-}" = "--seed" ]; then
       $PSQL_CMD -f "$f"
     fi
   done
+  echo ""
+  echo "══ Generating 500+ record production dataset ══"
+  node "$DB_DIR/seed/generate_seed.js"
 fi
 
 echo ""

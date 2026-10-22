@@ -18,6 +18,9 @@ import {
   Users,
   AlertCircle,
   Loader2,
+  GraduationCap,
+  School,
+  ShieldAlert,
 } from 'lucide-react';
 
 export function ShowDetail() {
@@ -92,20 +95,35 @@ export function ShowDetail() {
   }
 
   if (error || !show) {
+    const isRestricted = error && (error.toLowerCase().includes('restrict') || error.toLowerCase().includes('exclusive') || error.toLowerCase().includes('campus'));
+
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16">
-        <div className="p-6 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3 text-red-800">
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-bold text-red-900">Show Unavailable</h3>
-            <p className="text-sm mt-1">{error || 'Show details could not be retrieved.'}</p>
+      <div className="max-w-xl mx-auto px-4 py-20">
+        <div className={`p-8 rounded-3xl border text-center ${isRestricted ? 'bg-amber-50/70 border-amber-200' : 'bg-red-50/70 border-red-200'}`}>
+          <div className={`w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center ${isRestricted ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+            {isRestricted ? <ShieldAlert className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+          </div>
+          <h3 className="text-lg font-bold text-slate-900">
+            {isRestricted ? 'Audience Restricted Event' : 'Show Unavailable'}
+          </h3>
+          <p className="text-xs text-slate-600 mt-2 max-w-sm mx-auto leading-relaxed">
+            {error || 'Show details could not be retrieved.'}
+          </p>
+          <div className="mt-6 flex items-center justify-center gap-3">
             <Link
               to="/events"
-              className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 hover:text-red-900 underline"
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Return to Events Catalog
+              Browse Events
             </Link>
+            {!user && (
+              <Link
+                to="/login"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors"
+              >
+                Log In
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -153,6 +171,27 @@ export function ShowDetail() {
               <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
                 {show.event?.event_type || 'EVENT'}
               </span>
+              {show.allowed_attendees && (
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border">
+                  {show.allowed_attendees.length === 1 && show.allowed_attendees[0] === 'STUDENT' ? (
+                    <span className="text-purple-700 bg-purple-50 flex items-center gap-1">
+                      <GraduationCap className="w-3.5 h-3.5" /> Student Exclusive
+                    </span>
+                  ) : show.allowed_attendees.length === 1 && show.allowed_attendees[0] === 'FACULTY' ? (
+                    <span className="text-amber-700 bg-amber-50 flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5" /> Faculty Exclusive
+                    </span>
+                  ) : show.allowed_attendees.length === 2 && show.allowed_attendees.includes('STUDENT') && show.allowed_attendees.includes('FACULTY') ? (
+                    <span className="text-indigo-700 bg-indigo-50">
+                      🎓👨‍🏫 Students & Faculty Only
+                    </span>
+                  ) : (
+                    <span className="text-blue-700 bg-blue-50">
+                      🌐 Open to All
+                    </span>
+                  )}
+                </span>
+              )}
               <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
                 Organized by {show.club?.club_name}
               </span>
@@ -217,10 +256,23 @@ export function ShowDetail() {
             <div>
               <div className="text-xs text-slate-500 font-medium">Venue</div>
               <div className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                {show.venue?.name || show.venue?.venue_name}
-                <span className="text-[10px] font-semibold uppercase text-purple-600 bg-purple-100 px-1.5 py-0.2 rounded">
-                  {show.venue?.venue_type}
-                </span>
+                {show.venue?.venue_type === 'classroom' ? (
+                  <>
+                    <School className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>{show.venue?.name || show.venue?.venue_name}</span>
+                    <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-full">
+                      Classroom · Cap: {show.venue?.capacity}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>{show.venue?.name || show.venue?.venue_name}</span>
+                    <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded-full">
+                      Auditorium · 500 Seats
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>

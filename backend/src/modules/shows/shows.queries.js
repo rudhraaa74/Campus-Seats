@@ -23,6 +23,7 @@ export async function getShowById(showId) {
       s.start_time,
       s.end_time,
       s.status,
+      s.allowed_attendees,
       e.event_id,
       e.title AS event_title,
       e.event_type,

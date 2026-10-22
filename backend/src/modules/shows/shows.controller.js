@@ -19,7 +19,7 @@ export async function getShowById(req, res, next) {
       throw error;
     }
 
-    const result = await showsService.getShowDetail(showId);
+    const result = await showsService.getShowDetail(showId, req.user);
     return res.status(200).json(result);
   } catch (err) {
     next(err);
@@ -40,7 +40,7 @@ export async function getShowSeats(req, res, next) {
       throw error;
     }
 
-    const result = await showsService.getShowSeats(showId);
+    const result = await showsService.getShowSeats(showId, req.user);
     return res.status(200).json(result);
   } catch (err) {
     next(err);

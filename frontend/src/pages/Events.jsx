@@ -18,6 +18,9 @@ import {
   Filter,
   RotateCcw,
   Loader2,
+  GraduationCap,
+  School,
+  MapPin,
 } from 'lucide-react';
 
 const CATEGORIES = ['ALL', 'CULTURAL', 'TECHNICAL', 'SPORTS', 'ACADEMIC', 'OTHER'];
@@ -256,11 +259,38 @@ export function Events() {
                 className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
               >
                 <div className="p-6">
-                  {/* Category & Club header */}
+                  {/* Category, Audience & Club header */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                      {ev.type || ev.event_type}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                        {ev.type || ev.event_type}
+                      </span>
+                      {ev.allowed_attendees_list && ev.allowed_attendees_list.length > 0 && (() => {
+                        const allTypes = [...new Set(ev.allowed_attendees_list.flat())];
+                        if (allTypes.length === 1 && allTypes[0] === 'STUDENT') {
+                          return (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
+                              <GraduationCap className="w-3 h-3" /> Student Only
+                            </span>
+                          );
+                        }
+                        if (allTypes.length === 1 && allTypes[0] === 'FACULTY') {
+                          return (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                              <Users className="w-3 h-3" /> Faculty Only
+                            </span>
+                          );
+                        }
+                        if (allTypes.length === 2 && allTypes.includes('STUDENT') && allTypes.includes('FACULTY')) {
+                          return (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              🎓👨‍🏫 Campus Only
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                     <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
                       <Users className="w-3.5 h-3.5 text-slate-400" />
                       {ev.club_name}
@@ -285,6 +315,46 @@ export function Events() {
                       <Clock className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
                       <span>Duration: {ev.duration_min} minutes</span>
                     </div>
+
+                    {/* Venue tag for primary show */}
+                    {ev.shows && ev.shows.length > 0 && (
+                      <div className="flex items-center gap-2 pt-0.5">
+                        {ev.shows[0].venue_type === 'classroom' ? (
+                          <>
+                            <School className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                            <span className="text-slate-700 font-medium">
+                              {ev.shows[0].venue_name} (Classroom · Cap: {ev.shows[0].capacity})
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <MapPin className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+                            <span className="text-slate-700 font-medium">
+                              {ev.shows[0].venue_name} (Auditorium · 500 Seats)
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Multi-show time pills */}
+                    {ev.shows && ev.shows.length > 1 && (
+                      <div className="pt-2">
+                        <div className="text-[11px] font-bold text-slate-500 mb-1">All Showtimes:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {ev.shows.map((s) => (
+                            <Link
+                              key={s.show_id}
+                              to={`/shows/${s.show_id}`}
+                              className="text-[10px] font-semibold px-2 py-0.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800 transition-colors"
+                            >
+                              {new Date(s.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
+                              {new Date(s.start_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -293,13 +363,25 @@ export function Events() {
                   <span className="text-xs font-semibold text-slate-500">
                     {ev.shows_count} {ev.shows_count === 1 ? 'Show' : 'Shows'}
                   </span>
-                  <Link
-                    to={`/shows/${ev.event_id}`}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors shadow-sm"
-                  >
-                    View Shows & Seats
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Link>
+                  {(() => {
+                    const targetShowId = ev.next_show_id || ev.latest_show_id || ev.shows?.[0]?.show_id;
+                    if (!targetShowId || ev.shows_count === 0) {
+                      return (
+                        <span className="px-3 py-1.5 rounded-xl bg-slate-200/80 text-slate-400 text-xs font-semibold cursor-not-allowed">
+                          No Upcoming Shows
+                        </span>
+                      );
+                    }
+                    return (
+                      <Link
+                        to={`/shows/${targetShowId}`}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors shadow-sm"
+                      >
+                        View Seats & Book
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+                    );
+                  })()}
                 </div>
               </div>
             );

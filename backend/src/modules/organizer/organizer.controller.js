@@ -77,18 +77,64 @@ export async function updateEvent(req, res, next) {
 }
 
 /**
+ * GET /api/v1/organizer/shows
+ */
+export async function getShows(req, res, next) {
+  try {
+    const clubIds = req.user.clubIds || [];
+    const result = await organizerService.listClubShows(clubIds);
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/organizer/venues/classroom
+ */
+export async function createClassroomVenue(req, res, next) {
+  try {
+    const { room_number, name, capacity } = req.body;
+    const result = await organizerService.createClassroomVenue({
+      roomNumber: room_number || name,
+      capacity,
+    });
+    return res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * POST /api/v1/organizer/shows
  */
 export async function createShow(req, res, next) {
   try {
-    const { event_id, venue_id, start_time, end_time } = req.body;
+    const {
+      event_id,
+      venue_id,
+      venue_type,
+      room_number,
+      capacity,
+      allowed_attendees,
+      start_time,
+      end_time,
+      prices,
+      base_price,
+    } = req.body;
     const userClubIds = req.user.clubIds || [];
 
     const result = await organizerService.createShow({
       eventId: event_id,
       venueId: venue_id,
+      venueType: venue_type,
+      roomNumber: room_number,
+      capacity,
+      allowedAttendees: allowed_attendees,
       startTime: start_time,
       endTime: end_time,
+      prices,
+      basePrice: base_price,
       userClubIds,
     });
 

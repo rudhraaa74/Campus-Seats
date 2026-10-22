@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { Router } from 'express';
+import { optionalAuthenticate } from '../../middleware/auth.js';
 import * as eventsController from './events.controller.js';
 
 const router = Router();
@@ -12,9 +13,9 @@ const router = Router();
 router.get('/filters', eventsController.getFilterOptions);
 
 // GET /api/v1/events (list, search, filter, paginate)
-router.get('/', eventsController.getEvents);
+router.get('/', optionalAuthenticate, eventsController.getEvents);
 
 // GET /api/v1/events/:id (detail with shows)
-router.get('/:id', eventsController.getEventById);
+router.get('/:id', optionalAuthenticate, eventsController.getEventById);
 
 export default router;

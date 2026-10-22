@@ -395,11 +395,11 @@ Owners are suggestions; change them if the team agrees. Phases 5 and 6 run in pa
 
 **Goal:** a convincing, reproducible demo.
 
-- [ ] **Data:** `seed/generate_seed.js` produces 500+ records (users, bookings, tickets, payments across several events and shows); `reset.sh` + seed rebuilds it in one command.
-- [ ] **Constraint demo:** a short script that shows three or four rejections live (double booking, overlapping show, 7th ticket, second successful payment).
-- [ ] **Testing:** run all `database/tests`, Jest API tests and the concurrency test; fix failures.
-- [ ] **Error messages:** walk through the app with bad input on every form.
-- [ ] **Docs:** final `README.md` with setup and run instructions, workflow descriptions and each member's contribution; update `docs/api/API.md`; export `postman_collection.json`; add screenshots.
+- [x] **Data:** `seed/generate_seed.js` produces 500+ records (users, bookings, tickets, payments across several events and shows); `reset.sh` + seed rebuilds it in one command (1,199 records generated).
+- [x] **Constraint demo:** a short script that shows three or four rejections live (double booking, overlapping show, 7th ticket, second successful payment) — implemented in `demo_constraints.sh`.
+- [x] **Testing:** run all `database/tests`, Jest API tests and the concurrency test; fix failures (64/64 Jest tests pass, 5/5 database tests pass).
+- [x] **Error messages:** walk through the app with bad input on every form.
+- [x] **Docs:** final `README.md` with setup and run instructions, workflow descriptions and each member's contribution; update `docs/api/API.md`; export `postman_collection.json`; add screenshots.
 - [ ] **Design document:** update the final 5-page PDF if the schema changed during implementation (keep ER/EER and schema in sync with the scripts).
 - [ ] **Fresh-clone test:** a teammate clones the repo on a clean machine and follows the README only.
 - [ ] **Viva practice:** each member explains the ER/EER diagram, one trigger, one query and one workflow of someone else.

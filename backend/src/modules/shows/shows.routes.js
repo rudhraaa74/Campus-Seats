@@ -4,14 +4,16 @@
 // ─────────────────────────────────────────────────────────────
 
 import { Router } from 'express';
+import { optionalAuthenticate } from '../../middleware/auth.js';
 import * as showsController from './shows.controller.js';
 
 const router = Router();
 
 // GET /api/v1/shows/:id (details & prices)
-router.get('/:id', showsController.getShowById);
+router.get('/:id', optionalAuthenticate, showsController.getShowById);
 
 // GET /api/v1/shows/:id/seats (real-time seat status / remaining slots)
-router.get('/:id/seats', showsController.getShowSeats);
+router.get('/:id/seats', optionalAuthenticate, showsController.getShowSeats);
 
 export default router;
+

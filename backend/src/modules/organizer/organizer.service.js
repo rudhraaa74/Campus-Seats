@@ -23,6 +23,36 @@ export async function listClubEvents(clubIds) {
 }
 
 /**
+ * Retrieves all shows managed by the club manager
+ */
+export async function listClubShows(clubIds) {
+  const shows = await queries.getShowsByClubs(clubIds);
+  return { shows };
+}
+
+/**
+ * Creates or updates a classroom venue with room number and capacity
+ */
+export async function createClassroomVenue({ roomNumber, capacity }) {
+  if (!roomNumber || !roomNumber.trim()) {
+    const error = new Error('Room number/name is required for classroom.');
+    error.status = 422;
+    error.code = 'INVALID_INPUT';
+    throw error;
+  }
+  const cap = parseInt(capacity, 10);
+  if (!cap || cap <= 0) {
+    const error = new Error('Classroom capacity must be a positive integer.');
+    error.status = 422;
+    error.code = 'INVALID_INPUT';
+    throw error;
+  }
+
+  const venue = await queries.getOrCreateClassroomVenue({ roomNumber, capacity: cap });
+  return { venue };
+}
+
+/**
  * Creates a new event for an authorized club (BR11)
  */
 export async function createEvent({ clubId, title, eventType, durationMin, description, userClubIds }) {
@@ -90,9 +120,23 @@ export async function updateEvent(eventId, { title, eventType, durationMin, desc
 
 /**
  * Schedules a new show for an event
+ * Supports Auditorium or Classroom (with custom room number and capacity)
+ * Supports Audience Access restrictions: STUDENT, FACULTY, GUEST, etc.
  * Triggers enforce BR2 (venue overlap GiST) and BR13 (show duration >= event duration)
  */
-export async function createShow({ eventId, venueId, startTime, endTime, userClubIds }) {
+export async function createShow({
+  eventId,
+  venueType,
+  venueId,
+  roomNumber,
+  capacity,
+  allowedAttendees,
+  startTime,
+  endTime,
+  prices,
+  basePrice,
+  userClubIds,
+}) {
   const event = await queries.getEventById(eventId);
   if (!event) {
     const error = new Error('Event not found.');
@@ -125,17 +169,94 @@ export async function createShow({ eventId, venueId, startTime, endTime, userClu
     throw error;
   }
 
-  // Database will run triggers:
-  // - ex_show_venue_overlap (BR2)
-  // - fn_check_show_duration (BR13)
-  const show = await queries.createShow({
+  // 1. Resolve venue
+  let targetVenueId = venueId ? parseInt(venueId, 10) : null;
+  const isClassroom = (venueType || '').toUpperCase() === 'CLASSROOM' || (!targetVenueId && roomNumber);
+
+  if (isClassroom && roomNumber && roomNumber.trim()) {
+    const venue = await queries.getOrCreateClassroomVenue({
+      roomNumber: roomNumber.trim(),
+      capacity: capacity ? parseInt(capacity, 10) : 60,
+    });
+    targetVenueId = venue.venue_id;
+  }
+
+  if (!targetVenueId) {
+    const error = new Error('Please select or specify a valid venue for the show.');
+    error.status = 422;
+    error.code = 'INVALID_INPUT';
+    throw error;
+  }
+
+  // 2. Normalize allowed attendees
+  let normalizedAttendees = ['STUDENT', 'FACULTY', 'GUEST'];
+  if (Array.isArray(allowedAttendees) && allowedAttendees.length > 0) {
+    const filtered = allowedAttendees
+      .map((t) => (t || '').toString().trim().toUpperCase())
+      .filter((t) => ['STUDENT', 'FACULTY', 'GUEST'].includes(t));
+    if (filtered.length > 0) {
+      normalizedAttendees = filtered;
+    }
+  }
+
+  // 3. Insert show (Database triggers ex_show_venue_overlap and fn_check_show_duration will validate)
+  const createdShow = await queries.createShow({
     eventId: parseInt(eventId, 10),
-    venueId: parseInt(venueId, 10),
+    venueId: targetVenueId,
     startTime: start.toISOString(),
     endTime: end.toISOString(),
+    allowedAttendees: normalizedAttendees,
   });
 
-  return { show };
+  // 4. Configure initial prices if provided or default so show is immediately bookable
+  const venues = await queries.getVenuesWithCategories();
+  const currentVenue = venues.find((v) => v.venue_id === targetVenueId);
+  const categories = currentVenue?.categories || [];
+
+  if (Array.isArray(prices) && prices.length > 0) {
+    await withTransaction(async (client) => {
+      for (const item of prices) {
+        if (item.category_id && item.user_type && item.price !== undefined) {
+          await queries.upsertShowPrice(client, {
+            showId: createdShow.show_id,
+            categoryId: parseInt(item.category_id, 10),
+            userType: item.user_type.toUpperCase(),
+            price: parseFloat(item.price),
+          });
+        }
+      }
+    });
+  } else if (categories.length > 0) {
+    // Seed default prices for allowed attendee types
+    await withTransaction(async (client) => {
+      for (const cat of categories) {
+        for (const type of normalizedAttendees) {
+          let priceVal = 50.0;
+          if (basePrice && basePrice[type.toLowerCase()] !== undefined) {
+            priceVal = parseFloat(basePrice[type.toLowerCase()]);
+          } else {
+            // Sensible defaults
+            if (type === 'STUDENT') priceVal = cat.name.toLowerCase().includes('gold') ? 50.0 : 20.0;
+            if (type === 'FACULTY') priceVal = cat.name.toLowerCase().includes('gold') ? 100.0 : 50.0;
+            if (type === 'GUEST') priceVal = cat.name.toLowerCase().includes('gold') ? 150.0 : 80.0;
+          }
+          await queries.upsertShowPrice(client, {
+            showId: createdShow.show_id,
+            categoryId: cat.category_id,
+            userType: type,
+            price: priceVal,
+          });
+        }
+      }
+    });
+  }
+
+  const showDetail = await queries.getShowById(createdShow.show_id);
+
+  return {
+    show: showDetail,
+    message: 'Show scheduled successfully.',
+  };
 }
 
 /**

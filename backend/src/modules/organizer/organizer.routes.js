@@ -17,6 +17,7 @@ router.use(requireClubManager);
 
 // Venues and categories
 router.get('/venues', organizerController.getVenues);
+router.post('/venues/classroom', organizerController.createClassroomVenue);
 
 // Events management
 router.get('/events', organizerController.getEvents);
@@ -24,6 +25,7 @@ router.post('/events', organizerController.createEvent);
 router.put('/events/:id', organizerController.updateEvent);
 
 // Shows management
+router.get('/shows', organizerController.getShows);
 router.post('/shows', organizerController.createShow);
 router.post('/shows/:id/cancel', organizerController.cancelShow);
 

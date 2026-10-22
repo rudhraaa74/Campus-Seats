@@ -26,6 +26,9 @@ import {
   Layers,
   BarChart3,
   Edit,
+  Users,
+  GraduationCap,
+  School,
 } from 'lucide-react';
 
 export function OrganizerDashboard() {
@@ -77,9 +80,17 @@ export function OrganizerDashboard() {
 
   const [showForm, setShowForm] = useState({
     event_id: '',
+    venue_type: 'AUDITORIUM', // 'AUDITORIUM' | 'CLASSROOM'
     venue_id: '',
+    classroom_mode: 'existing', // 'existing' | 'new'
+    room_number: '',
+    capacity: 60,
+    audience_mode: 'ALL', // 'STUDENT' | 'FACULTY' | 'BOTH' | 'ALL'
     start_time: '',
     end_time: '',
+    price_student: 20,
+    price_faculty: 50,
+    price_guest: 80,
   });
 
   const fetchData = async () => {
@@ -89,7 +100,7 @@ export function OrganizerDashboard() {
       const [eventsData, venuesData, showsData] = await Promise.all([
         api.get('/organizer/events'),
         api.get('/organizer/venues'),
-        api.get('/shows'),
+        api.get('/organizer/shows'),
       ]);
 
       setEvents(eventsData.events || []);
@@ -157,11 +168,31 @@ export function OrganizerDashboard() {
   // 2. Show scheduling handler
   const handleOpenShowModal = () => {
     setModalError('');
+    const auditoriumVenue = venues.find((v) => v.venue_type === 'auditorium');
+    const classroomVenue = venues.find((v) => v.venue_type === 'classroom');
+
+    // Default start_time: tomorrow at 18:00 local time
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(18, 0, 0, 0);
+    const startIso = new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+    const endTomorrow = new Date(tomorrow.getTime() + 2.5 * 60 * 60 * 1000);
+    const endIso = new Date(endTomorrow.getTime() - endTomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
     setShowForm({
       event_id: events[0]?.event_id || '',
-      venue_id: venues[0]?.venue_id || '',
-      start_time: '',
-      end_time: '',
+      venue_type: 'AUDITORIUM',
+      venue_id: auditoriumVenue?.venue_id || venues[0]?.venue_id || '',
+      classroom_mode: 'existing',
+      room_number: '',
+      capacity: classroomVenue?.capacity || 60,
+      audience_mode: 'ALL',
+      start_time: startIso,
+      end_time: endIso,
+      price_student: 20,
+      price_faculty: 50,
+      price_guest: 80,
     });
     setShowShowModal(true);
   };
@@ -172,12 +203,47 @@ export function OrganizerDashboard() {
       setIsSubmitting(true);
       setModalError('');
 
-      await api.post('/organizer/shows', {
+      let allowed_attendees = ['STUDENT', 'FACULTY', 'GUEST'];
+      if (showForm.audience_mode === 'STUDENT') {
+        allowed_attendees = ['STUDENT'];
+      } else if (showForm.audience_mode === 'FACULTY') {
+        allowed_attendees = ['FACULTY'];
+      } else if (showForm.audience_mode === 'BOTH') {
+        allowed_attendees = ['STUDENT', 'FACULTY'];
+      }
+
+      const payload = {
         event_id: parseInt(showForm.event_id, 10),
-        venue_id: parseInt(showForm.venue_id, 10),
+        venue_type: showForm.venue_type,
         start_time: new Date(showForm.start_time).toISOString(),
         end_time: new Date(showForm.end_time).toISOString(),
-      });
+        allowed_attendees,
+        base_price: {
+          student: parseFloat(showForm.price_student) || 0,
+          faculty: parseFloat(showForm.price_faculty) || 0,
+          guest: parseFloat(showForm.price_guest) || 0,
+        },
+      };
+
+      if (showForm.venue_type === 'AUDITORIUM') {
+        payload.venue_id = parseInt(showForm.venue_id, 10);
+      } else {
+        // Classroom
+        if (showForm.classroom_mode === 'new') {
+          if (!showForm.room_number.trim()) {
+            throw new Error('Please enter a room number or classroom name.');
+          }
+          payload.room_number = showForm.room_number.trim();
+          payload.capacity = parseInt(showForm.capacity, 10) || 60;
+        } else {
+          payload.venue_id = parseInt(showForm.venue_id, 10);
+          if (showForm.capacity) {
+            payload.capacity = parseInt(showForm.capacity, 10);
+          }
+        }
+      }
+
+      await api.post('/organizer/shows', payload);
 
       setSuccessMessage('Show scheduled successfully.');
       setShowShowModal(false);
@@ -408,6 +474,20 @@ export function OrganizerDashboard() {
                             SCHEDULED
                           </span>
                         )}
+                        {/* Audience Badge */}
+                        {s.allowed_attendees && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-50 border border-slate-200">
+                            {s.allowed_attendees.length === 1 && s.allowed_attendees[0] === 'STUDENT' ? (
+                              <span className="text-purple-700">🎓 Student Only</span>
+                            ) : s.allowed_attendees.length === 1 && s.allowed_attendees[0] === 'FACULTY' ? (
+                              <span className="text-amber-700">👨‍🏫 Faculty Only</span>
+                            ) : s.allowed_attendees.length === 2 && s.allowed_attendees.includes('STUDENT') && s.allowed_attendees.includes('FACULTY') ? (
+                              <span className="text-indigo-700">🎓👨‍🏫 Students & Faculty</span>
+                            ) : (
+                              <span className="text-blue-700">🌐 Open to All</span>
+                            )}
+                          </span>
+                        )}
                         <span className="text-xs text-slate-400">•</span>
                         <span className="text-xs font-semibold text-slate-500">{s.event_title}</span>
                       </div>
@@ -417,9 +497,18 @@ export function OrganizerDashboard() {
                           <Clock className="w-3.5 h-3.5 text-purple-600" />
                           {startDate.toLocaleDateString()} · {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        <span className="flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-slate-600" />
-                          {s.venue_name} ({s.venue_type?.toUpperCase()})
+                        <span className="flex items-center gap-1.5 font-medium">
+                          {s.venue_type === 'classroom' ? (
+                            <>
+                              <School className="w-3.5 h-3.5 text-blue-600" />
+                              <span>{s.venue_name} (Classroom · Cap: {s.capacity || '60'})</span>
+                            </>
+                          ) : (
+                            <>
+                              <Building2 className="w-3.5 h-3.5 text-purple-600" />
+                              <span>{s.venue_name} (Auditorium · 500 Seats)</span>
+                            </>
+                          )}
                         </span>
                       </div>
                     </div>
@@ -596,14 +685,22 @@ export function OrganizerDashboard() {
 
       {/* ─── MODAL 2: SCHEDULE SHOW MODAL ─── */}
       {showShowModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 my-8 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900">Schedule Show</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-purple-700">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Schedule Show</h3>
+                  <p className="text-[11px] text-slate-500">Create a time slot, select venue, and configure audience access.</p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowShowModal(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 p-1"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -617,44 +714,285 @@ export function OrganizerDashboard() {
             )}
 
             <form onSubmit={handleSaveShow} className="mt-4 space-y-4">
+              {/* 1. Event Selection */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Event</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Select Event</label>
                 <select
                   required
                   value={showForm.event_id}
                   onChange={(e) => setShowForm({ ...showForm, event_id: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:ring-2 focus:ring-purple-500 focus:outline-none"
                 >
                   {events.map((ev) => (
                     <option key={ev.event_id} value={ev.event_id}>
-                      {ev.title} ({ev.duration_min} min required)
+                      {ev.title} ({ev.duration_min} min required · {ev.event_type})
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* 2. Venue Type Selection */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Campus Venue</label>
-                <select
-                  required
-                  value={showForm.venue_id}
-                  onChange={(e) => setShowForm({ ...showForm, venue_id: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                >
-                  {venues.map((v) => (
-                    <option key={v.venue_id} value={v.venue_id}>
-                      {v.name} ({v.venue_type.toUpperCase()} · Capacity: {v.capacity || '500'})
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Venue Type</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const auditorium = venues.find((v) => v.venue_type === 'auditorium');
+                      setShowForm({
+                        ...showForm,
+                        venue_type: 'AUDITORIUM',
+                        venue_id: auditorium?.venue_id || venues[0]?.venue_id || '',
+                      });
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col gap-1.5 ${
+                      showForm.venue_type === 'AUDITORIUM'
+                        ? 'border-purple-600 bg-purple-50/60 ring-2 ring-purple-500/20 shadow-xs'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Building2 className={`w-4 h-4 ${showForm.venue_type === 'AUDITORIUM' ? 'text-purple-600' : 'text-slate-500'}`} />
+                      <span className="text-xs font-bold text-slate-900">Auditorium</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      Numbered seating with interactive seat map (Gold/Silver categories).
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const classroom = venues.find((v) => v.venue_type === 'classroom');
+                      setShowForm({
+                        ...showForm,
+                        venue_type: 'CLASSROOM',
+                        venue_id: classroom?.venue_id || '',
+                        classroom_mode: 'existing',
+                        capacity: classroom?.capacity || 60,
+                      });
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col gap-1.5 ${
+                      showForm.venue_type === 'CLASSROOM'
+                        ? 'border-purple-600 bg-purple-50/60 ring-2 ring-purple-500/20 shadow-xs'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <School className={`w-4 h-4 ${showForm.venue_type === 'CLASSROOM' ? 'text-purple-600' : 'text-slate-500'}`} />
+                      <span className="text-xs font-bold text-slate-900">Classroom / Hall</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      General admission with room number and open capacity.
+                    </p>
+                  </button>
+                </div>
               </div>
 
+              {/* 3. Venue Details Configuration */}
+              {showForm.venue_type === 'AUDITORIUM' ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Select Auditorium</label>
+                  <select
+                    required
+                    value={showForm.venue_id}
+                    onChange={(e) => setShowForm({ ...showForm, venue_id: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  >
+                    {venues
+                      .filter((v) => v.venue_type === 'auditorium')
+                      .map((v) => (
+                        <option key={v.venue_id} value={v.venue_id}>
+                          {v.name} (Capacity: 500 numbered seats)
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                    <span>Classroom Venue Selection</span>
+                    <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500">
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="classroom_mode"
+                          checked={showForm.classroom_mode === 'existing'}
+                          onChange={() => setShowForm({ ...showForm, classroom_mode: 'existing' })}
+                          className="text-purple-600 focus:ring-purple-500"
+                        />
+                        Existing Room
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="classroom_mode"
+                          checked={showForm.classroom_mode === 'new'}
+                          onChange={() => setShowForm({ ...showForm, classroom_mode: 'new' })}
+                          className="text-purple-600 focus:ring-purple-500"
+                        />
+                        + Custom Room
+                      </label>
+                    </div>
+                  </div>
+
+                  {showForm.classroom_mode === 'existing' ? (
+                    <div>
+                      <select
+                        required
+                        value={showForm.venue_id}
+                        onChange={(e) => {
+                          const v = venues.find((item) => item.venue_id === parseInt(e.target.value, 10));
+                          setShowForm({
+                            ...showForm,
+                            venue_id: e.target.value,
+                            capacity: v?.capacity || 60,
+                          });
+                        }}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                      >
+                        {venues
+                          .filter((v) => v.venue_type === 'classroom')
+                          .map((v) => (
+                            <option key={v.venue_id} value={v.venue_id}>
+                              {v.name} (Capacity: {v.capacity} seats)
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Room Number / Name</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Lecture Hall 302"
+                          value={showForm.room_number}
+                          onChange={(e) => setShowForm({ ...showForm, room_number: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Capacity (Seats)</label>
+                        <input
+                          type="number"
+                          min="10"
+                          max="500"
+                          required
+                          value={showForm.capacity}
+                          onChange={(e) => setShowForm({ ...showForm, capacity: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 4. Audience Access Controls */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Target Audience & Access Control
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label
+                    className={`p-2.5 rounded-xl border cursor-pointer text-left transition-all flex items-start gap-2 ${
+                      showForm.audience_mode === 'STUDENT'
+                        ? 'border-purple-600 bg-purple-50/70 ring-1 ring-purple-500'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="audience_mode"
+                      checked={showForm.audience_mode === 'STUDENT'}
+                      onChange={() => setShowForm({ ...showForm, audience_mode: 'STUDENT' })}
+                      className="sr-only"
+                    />
+                    <GraduationCap className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Student Only</div>
+                      <div className="text-[10px] text-slate-500">Only visible & bookable by verified students</div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`p-2.5 rounded-xl border cursor-pointer text-left transition-all flex items-start gap-2 ${
+                      showForm.audience_mode === 'FACULTY'
+                        ? 'border-purple-600 bg-purple-50/70 ring-1 ring-purple-500'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="audience_mode"
+                      checked={showForm.audience_mode === 'FACULTY'}
+                      onChange={() => setShowForm({ ...showForm, audience_mode: 'FACULTY' })}
+                      className="sr-only"
+                    />
+                    <Users className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Faculty Only</div>
+                      <div className="text-[10px] text-slate-500">Only visible & bookable by university faculty</div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`p-2.5 rounded-xl border cursor-pointer text-left transition-all flex items-start gap-2 ${
+                      showForm.audience_mode === 'BOTH'
+                        ? 'border-purple-600 bg-purple-50/70 ring-1 ring-purple-500'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="audience_mode"
+                      checked={showForm.audience_mode === 'BOTH'}
+                      onChange={() => setShowForm({ ...showForm, audience_mode: 'BOTH' })}
+                      className="sr-only"
+                    />
+                    <div className="flex items-center text-indigo-600 shrink-0 mt-0.5">
+                      <GraduationCap className="w-3.5 h-3.5" />
+                      <Users className="w-3.5 h-3.5 -ml-1" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Students & Faculty</div>
+                      <div className="text-[10px] text-slate-500">Campus community exclusive (hidden from guests)</div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`p-2.5 rounded-xl border cursor-pointer text-left transition-all flex items-start gap-2 ${
+                      showForm.audience_mode === 'ALL'
+                        ? 'border-purple-600 bg-purple-50/70 ring-1 ring-purple-500'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="audience_mode"
+                      checked={showForm.audience_mode === 'ALL'}
+                      onChange={() => setShowForm({ ...showForm, audience_mode: 'ALL' })}
+                      className="sr-only"
+                    />
+                    <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Open to All</div>
+                      <div className="text-[10px] text-slate-500">Students, faculty, and outside guests</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* 5. Date & Time Selection */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Start Date & Time</label>
                   <input
                     type="datetime-local"
                     required
+                    min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
                     value={showForm.start_time}
                     onChange={(e) => setShowForm({ ...showForm, start_time: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
@@ -666,6 +1004,7 @@ export function OrganizerDashboard() {
                   <input
                     type="datetime-local"
                     required
+                    min={showForm.start_time || new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
                     value={showForm.end_time}
                     onChange={(e) => setShowForm({ ...showForm, end_time: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
@@ -673,9 +1012,60 @@ export function OrganizerDashboard() {
                 </div>
               </div>
 
-              <div className="p-3 bg-purple-50 rounded-xl border border-purple-200/60 text-[11px] text-purple-900 space-y-1">
-                <div>• Overlap check: PostgreSQL exclusion constraint (BR2) enforces single booking per venue.</div>
-                <div>• Duration check: Show duration must be at least as long as event duration (BR13).</div>
+              {/* 6. Base Ticket Pricing */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Initial Ticket Pricing (₹ per person)
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-slate-500 mb-0.5 font-medium">Student (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="5"
+                      value={showForm.price_student}
+                      onChange={(e) => setShowForm({ ...showForm, price_student: e.target.value })}
+                      disabled={showForm.audience_mode === 'FACULTY'}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs bg-slate-50 disabled:opacity-40 focus:ring-2 focus:ring-purple-500 focus:outline-none font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-slate-500 mb-0.5 font-medium">Faculty (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="5"
+                      value={showForm.price_faculty}
+                      onChange={(e) => setShowForm({ ...showForm, price_faculty: e.target.value })}
+                      disabled={showForm.audience_mode === 'STUDENT'}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs bg-slate-50 disabled:opacity-40 focus:ring-2 focus:ring-purple-500 focus:outline-none font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-slate-500 mb-0.5 font-medium">Guest (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="5"
+                      value={showForm.price_guest}
+                      onChange={(e) => setShowForm({ ...showForm, price_guest: e.target.value })}
+                      disabled={showForm.audience_mode === 'STUDENT' || showForm.audience_mode === 'FACULTY' || showForm.audience_mode === 'BOTH'}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs bg-slate-50 disabled:opacity-40 focus:ring-2 focus:ring-purple-500 focus:outline-none font-bold"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Default pricing is auto-configured so tickets can be booked immediately. Customize seat tiers anytime via Price Grid.
+                </p>
+              </div>
+
+              {/* Helper checks */}
+              <div className="p-3 bg-purple-50/70 rounded-xl border border-purple-200/60 text-[11px] text-purple-900 space-y-1">
+                <div>• Overlap check: PostgreSQL exclusion constraint (BR2) enforces no double booking per venue.</div>
+                <div>• Duration check: Show duration must meet or exceed event duration (BR13).</div>
               </div>
 
               <div className="flex items-center gap-2 pt-2">

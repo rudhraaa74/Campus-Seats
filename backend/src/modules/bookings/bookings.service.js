@@ -47,6 +47,13 @@ export async function createHold({ userId, userType, showId, tickets = [], ticke
       throw error;
     }
 
+    if (show.allowed_attendees && !show.allowed_attendees.includes((userType || '').toUpperCase())) {
+      const error = new Error(`This event is restricted and not open to ${(userType || 'guest').toLowerCase()} attendees.`);
+      error.status = 403;
+      error.code = 'AUDIENCE_RESTRICTED';
+      throw error;
+    }
+
     // Insert PENDING booking (5-minute hold_expires_at)
     const newBooking = await queries.createPendingBooking(client, userId, showId);
 

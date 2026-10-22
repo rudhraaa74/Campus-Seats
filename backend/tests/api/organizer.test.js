@@ -13,6 +13,7 @@ import { redis } from '../../src/redis/client.js';
 describe('Organizer Module & Cancellation API Tests (Phase 5)', () => {
   let managerToken = '';
   let studentToken = '';
+  let facultyToken = '';
   let managerUserId = 1;
   let studentUserId = 2;
   const testRunId = Date.now();
@@ -25,6 +26,8 @@ describe('Organizer Module & Cancellation API Tests (Phase 5)', () => {
       await pool.query(`DELETE FROM show_price WHERE show_id IN (SELECT show_id FROM show WHERE event_id IN (SELECT event_id FROM event WHERE title LIKE 'ORG_TEST%'));`);
       await pool.query(`DELETE FROM show WHERE event_id IN (SELECT event_id FROM event WHERE title LIKE 'ORG_TEST%');`);
       await pool.query(`DELETE FROM event WHERE title LIKE 'ORG_TEST%';`);
+      await pool.query(`DELETE FROM seat_category WHERE venue_id IN (SELECT venue_id FROM venue WHERE name LIKE 'Lecture Hall 909%');`);
+      await pool.query(`DELETE FROM venue WHERE name LIKE 'Lecture Hall 909%';`);
     } catch (e) {
       // ignore
     }
@@ -54,6 +57,16 @@ describe('Organizer Module & Cancellation API Tests (Phase 5)', () => {
     expect(studentLogin.status).toBe(200);
     studentToken = studentLogin.body.token;
     studentUserId = studentLogin.body.user.user_id;
+
+    // Login as faculty attendee
+    const facultyLogin = await request(app)
+      .post('/api/v1/auth/login')
+      .send({
+        email: 'faculty@seatsync.ac.in',
+        password: 'Password123!',
+      });
+    expect(facultyLogin.status).toBe(200);
+    facultyToken = facultyLogin.body.token;
   });
 
   afterAll(async () => {
@@ -378,6 +391,92 @@ describe('Organizer Module & Cancellation API Tests (Phase 5)', () => {
 
       const payCheck = await pool.query('SELECT status FROM payment WHERE booking_id = $1;', [bookingId]);
       expect(payCheck.rows[0].status).toBe('REFUNDED');
+    });
+  });
+
+  describe('6. Classroom Auto-Creation & Audience Access Controls', () => {
+    let studentOnlyEventId = null;
+    let studentOnlyShowId = null;
+
+    it('creates a classroom venue on the fly when scheduling a classroom show', async () => {
+      // 1. Create event
+      const eventRes = await request(app)
+        .post('/api/v1/organizer/events')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          club_id: 1,
+          title: `ORG_TEST_Audience_Event_${testRunId}`,
+          event_type: 'ACADEMIC',
+          duration_min: 60,
+        });
+      expect(eventRes.status).toBe(201);
+      studentOnlyEventId = eventRes.body.event.event_id;
+
+      // 2. Schedule classroom show with custom roomNumber & capacity, and student-only audience
+      const showRes = await request(app)
+        .post('/api/v1/organizer/shows')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          event_id: studentOnlyEventId,
+          venue_type: 'CLASSROOM',
+          room_number: `Lecture Hall 909_${testRunId}`,
+          capacity: 55,
+          allowed_attendees: ['STUDENT'],
+          start_time: '2027-04-10T10:00:00Z',
+          end_time: '2027-04-10T12:00:00Z',
+          base_price: { student: 15 },
+        });
+
+      expect(showRes.status).toBe(201);
+      expect(showRes.body.show).toBeDefined();
+      expect(showRes.body.show.venue_type).toBe('classroom');
+      expect(showRes.body.show.capacity).toBe(55);
+      expect(showRes.body.show.allowed_attendees).toEqual(['STUDENT']);
+      studentOnlyShowId = showRes.body.show.show_id;
+    });
+
+    it('allows student to view student-only show details', async () => {
+      const res = await request(app)
+        .get(`/api/v1/shows/${studentOnlyShowId}`)
+        .set('Authorization', `Bearer ${studentToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.show.show_id).toBe(studentOnlyShowId);
+    });
+
+    it('blocks faculty from viewing student-only show (403 AUDIENCE_RESTRICTED)', async () => {
+      const res = await request(app)
+        .get(`/api/v1/shows/${studentOnlyShowId}`)
+        .set('Authorization', `Bearer ${facultyToken}`);
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('AUDIENCE_RESTRICTED');
+    });
+
+    it('filters student-only show out of faculty events catalog', async () => {
+      // Event has only student-only show, so faculty should NOT see this event in feed
+      const res = await request(app)
+        .get(`/api/v1/events?q=ORG_TEST_Audience_Event_${testRunId}`)
+        .set('Authorization', `Bearer ${facultyToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.events.length).toBe(0);
+
+      // Student SHOULD see this event in feed
+      const studentRes = await request(app)
+        .get(`/api/v1/events?q=ORG_TEST_Audience_Event_${testRunId}`)
+        .set('Authorization', `Bearer ${studentToken}`);
+      expect(studentRes.status).toBe(200);
+      expect(studentRes.body.events.length).toBe(1);
+    });
+
+    it('blocks faculty from holding tickets for student-only show (403 AUDIENCE_RESTRICTED)', async () => {
+      const res = await request(app)
+        .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${facultyToken}`)
+        .send({
+          show_id: studentOnlyShowId,
+          tickets: [{ attendee_type: 'FACULTY' }],
+        });
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('AUDIENCE_RESTRICTED');
     });
   });
 });

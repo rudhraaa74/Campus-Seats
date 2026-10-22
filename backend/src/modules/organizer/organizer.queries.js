@@ -127,13 +127,19 @@ export async function updateEvent(eventId, { title, eventType, durationMin, desc
 /**
  * Inserts a new show (enforcing BR2 overlap and BR13 duration triggers)
  */
-export async function createShow({ eventId, venueId, startTime, endTime }) {
+export async function createShow({ eventId, venueId, startTime, endTime, allowedAttendees }) {
   const query = `
-    INSERT INTO show (event_id, venue_id, start_time, end_time, status)
-    VALUES ($1, $2, $3, $4, 'SCHEDULED')
-    RETURNING show_id, event_id, venue_id, start_time, end_time, status;
+    INSERT INTO show (event_id, venue_id, start_time, end_time, status, allowed_attendees)
+    VALUES ($1, $2, $3, $4, 'SCHEDULED', $5)
+    RETURNING show_id, event_id, venue_id, start_time, end_time, status, allowed_attendees;
   `;
-  const result = await pool.query(query, [eventId, venueId, startTime, endTime]);
+  const result = await pool.query(query, [
+    eventId,
+    venueId,
+    startTime,
+    endTime,
+    allowedAttendees || ['STUDENT', 'FACULTY', 'GUEST'],
+  ]);
   return result.rows[0];
 }
 
@@ -149,6 +155,7 @@ export async function getShowById(showId) {
       s.start_time,
       s.end_time,
       s.status,
+      s.allowed_attendees,
       e.club_id,
       e.title AS event_title,
       e.duration_min,
@@ -215,3 +222,99 @@ export async function getShowPrices(showId) {
   const result = await pool.query(query, [showId]);
   return result.rows;
 }
+
+/**
+ * Retrieves all shows for events managed by the given club IDs
+ */
+export async function getShowsByClubs(clubIds) {
+  if (!clubIds || clubIds.length === 0) return [];
+
+  const query = `
+    SELECT 
+      s.show_id,
+      s.event_id,
+      s.venue_id,
+      s.start_time,
+      s.end_time,
+      s.status,
+      s.allowed_attendees,
+      s.created_at,
+      e.title AS event_title,
+      e.duration_min,
+      e.club_id,
+      c.name AS club_name,
+      v.name AS venue_name,
+      LOWER(v.venue_type) AS venue_type,
+      v.capacity,
+      COALESCE(
+        json_agg(
+          json_build_object(
+            'category_id', sp.category_id,
+            'category_name', sc.name,
+            'user_type', sp.user_type,
+            'price', sp.price
+          )
+        ) FILTER (WHERE sp.show_id IS NOT NULL),
+        '[]'
+      ) AS prices
+    FROM show s
+    JOIN event e ON s.event_id = e.event_id
+    JOIN club c ON e.club_id = c.club_id
+    JOIN venue v ON s.venue_id = v.venue_id
+    LEFT JOIN show_price sp ON s.show_id = sp.show_id
+    LEFT JOIN seat_category sc ON sp.category_id = sc.category_id
+    WHERE e.club_id = ANY($1::int[])
+    GROUP BY s.show_id, s.event_id, s.venue_id, s.start_time, s.end_time, s.status, s.allowed_attendees, s.created_at,
+             e.title, e.duration_min, e.club_id, c.name, v.name, v.venue_type, v.capacity
+    ORDER BY s.start_time DESC;
+  `;
+  const result = await pool.query(query, [clubIds]);
+  return result.rows;
+}
+
+/**
+ * Resolves or creates a classroom venue by name/room number and capacity
+ */
+export async function getOrCreateClassroomVenue({ roomNumber, capacity }) {
+  const trimmedName = roomNumber.trim();
+  const cap = parseInt(capacity, 10);
+
+  // Check if exists
+  const checkQuery = `SELECT venue_id, name, venue_type, capacity FROM venue WHERE LOWER(name) = LOWER($1);`;
+  const existing = await pool.query(checkQuery, [trimmedName]);
+
+  let venueRecord;
+  let venueId;
+
+  if (existing.rows.length > 0) {
+    venueRecord = existing.rows[0];
+    venueId = venueRecord.venue_id;
+    // If it's a classroom and capacity is provided and different, update it
+    if (venueRecord.venue_type === 'CLASSROOM' && cap && venueRecord.capacity !== cap) {
+      const updateQuery = `UPDATE venue SET capacity = $1 WHERE venue_id = $2 RETURNING venue_id, name, venue_type, capacity;`;
+      const updated = await pool.query(updateQuery, [cap, venueId]);
+      venueRecord = updated.rows[0];
+    }
+  } else {
+    // Insert new classroom venue
+    const insertQuery = `
+      INSERT INTO venue (name, venue_type, capacity)
+      VALUES ($1, 'CLASSROOM', $2)
+      RETURNING venue_id, name, venue_type, capacity;
+    `;
+    const inserted = await pool.query(insertQuery, [trimmedName, cap || 60]);
+    venueRecord = inserted.rows[0];
+    venueId = venueRecord.venue_id;
+
+    // Ensure default General seat_category exists
+    const categoryQuery = `
+      INSERT INTO seat_category (venue_id, name)
+      VALUES ($1, 'General')
+      ON CONFLICT (venue_id, name) DO NOTHING;
+    `;
+    await pool.query(categoryQuery, [venueId]);
+  }
+
+  return venueRecord;
+}
+

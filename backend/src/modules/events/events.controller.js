@@ -11,7 +11,7 @@ import * as eventsService from './events.service.js';
  */
 export async function getEvents(req, res, next) {
   try {
-    const { type, club_id, from, to, q, sort, page, limit } = req.query;
+    const { type, club_id, from, to, q, sort, page, limit, audience } = req.query;
     const result = await eventsService.listEvents({
       type,
       club_id,
@@ -21,6 +21,8 @@ export async function getEvents(req, res, next) {
       sort,
       page,
       limit,
+      audience,
+      user: req.user,
     });
     return res.status(200).json(result);
   } catch (err) {
@@ -42,7 +44,7 @@ export async function getEventById(req, res, next) {
       throw error;
     }
 
-    const result = await eventsService.getEventDetail(eventId);
+    const result = await eventsService.getEventDetail(eventId, req.user);
     return res.status(200).json(result);
   } catch (err) {
     next(err);

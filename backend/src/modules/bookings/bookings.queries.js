@@ -17,7 +17,7 @@ export async function expireHoldsForShow(showId) {
  */
 export async function getShowForBooking(client, showId) {
   const query = `
-    SELECT show_id, venue_id, start_time, end_time, status
+    SELECT show_id, venue_id, start_time, end_time, status, allowed_attendees
     FROM show
     WHERE show_id = $1;
   `;
