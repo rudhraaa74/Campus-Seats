@@ -35,7 +35,8 @@ for test_file in "$SCRIPT_DIR"/*.sql; do
   if [ -f "$test_file" ]; then
     count=$((count + 1))
     echo "  → Running $(basename "$test_file")..."
-    if $PSQL_CMD -f "$test_file" > /dev/null 2>&1; then
+    # Run in a single transaction that always rolls back so test state never leaks
+    if $PSQL_CMD -c "BEGIN;" -f "$test_file" -c "ROLLBACK;" > /dev/null 2>&1; then
       echo "    ✓ PASS"
       passed=$((passed + 1))
     else

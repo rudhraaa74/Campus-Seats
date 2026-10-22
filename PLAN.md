@@ -249,21 +249,21 @@ Owners are suggestions; change them if the team agrees. Phases 5 and 6 run in pa
 **Goal:** the complete schema from the design document, running in PostgreSQL, with every rule provably enforced.
 
 **Step 1 (by 24 Oct, Areesha) — unblock everyone**
-- [ ] `01_extensions.sql`: `CREATE EXTENSION IF NOT EXISTS btree_gist;`
-- [ ] `02_tables.sql`: all 15 tables with PKs, FKs (including the four composite FKs), `NOT NULL`, `UNIQUE`, `CHECK`, and the referential actions from the design (CASCADE vs RESTRICT).
-- [ ] `03_indexes.sql`: partial unique index on live tickets (BR1), `EXCLUDE USING gist` on shows (BR2), partial unique index on successful payments (BR15), search indexes (show start time, ticket by booking).
-- [ ] `seed/01_reference.sql`: one auditorium with seats and two categories, two classrooms (capacity set, one "General" category each), two clubs, a few users of each type, one club manager.
-- [ ] Push and tell the team: backend work can start.
+- [x] `01_extensions.sql`: `CREATE EXTENSION IF NOT EXISTS btree_gist;`
+- [x] `02_tables.sql`: all 15 tables with PKs, FKs (including the four composite FKs), `NOT NULL`, `UNIQUE`, `CHECK`, and the referential actions from the design (CASCADE vs RESTRICT).
+- [x] `03_indexes.sql`: partial unique index on live tickets (BR1), `EXCLUDE USING gist` on shows (BR2), partial unique index on successful payments (BR15), search indexes (show start time, ticket by booking).
+- [x] `seed/01_reference.sql`: one auditorium with seats and two categories, two classrooms (capacity set, one "General" category each), two clubs, a few users of each type, one club manager.
+- [x] Push and tell the team: backend work can start.
 
 **Step 2 (24–27 Oct, Harshitha)**
-- [ ] `04_functions.sql`: `expire_holds(show_id)` (marks unpaid PENDING bookings past `hold_expires_at` as EXPIRED and their HELD tickets as EXPIRED) and a no-argument version for the cron job.
-- [ ] `05_triggers.sql`: BR3 (seat vs venue type, capacity with `SELECT … FOR UPDATE` on the show), BR5 (price lookup and freeze), BR6 and BR14 (limits and subsidised ticket), BR7 (booking window), BR9 (user type vs subclass), BR10 (cancellation cascade), BR12, BR13, `total_amount` sync.
-- [ ] `06_views.sql`: `v_venue_capacity` plus the reporting views needed in Phase 6.
-- [ ] `seed/02_demo.sql`: events, shows, a few bookings, tickets and payments for development.
+- [x] `04_functions.sql`: `expire_holds(show_id)` (marks unpaid PENDING bookings past `hold_expires_at` as EXPIRED and their HELD tickets as EXPIRED) and a no-argument version for the cron job.
+- [x] `05_triggers.sql`: BR3 (seat vs venue type, capacity with `SELECT … FOR UPDATE` on the show), BR5 (price lookup and freeze), BR6 and BR14 (limits and subsidised ticket), BR7 (booking window), BR9 (user type vs subclass), BR10 (cancellation cascade), BR12, BR13, `total_amount` sync.
+- [x] `06_views.sql`: `v_venue_capacity` plus the reporting views needed in Phase 6.
+- [x] `seed/02_demo.sql`: events, shows, a few bookings, tickets and payments for development.
 
 **Step 3 (everyone, in parallel) — rule tests**
-- [ ] One file in `database/tests/` per business rule: it runs inside a transaction, tries to violate the rule, and the expected error is written in a comment. Examples: two HELD tickets on one seat; overlapping shows; 7th ticket in a booking; classroom ticket with a seat; second successful payment.
-- [ ] A short `run_all.sh` that runs them and prints pass/fail.
+- [x] One file in `database/tests/` per business rule: it runs inside a transaction, tries to violate the rule, and the expected error is written in a comment. Examples: two HELD tickets on one seat; overlapping shows; 7th ticket in a booking; classroom ticket with a seat; second successful payment.
+- [x] A short `run_all.sh` that runs them and prints pass/fail.
 
 **Checkpoint:** `reset.sh` builds the database from nothing; every `tests/` file fails in the expected way; the schema matches the relational diagram.
 
