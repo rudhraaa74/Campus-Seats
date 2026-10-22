@@ -25,5 +25,15 @@ process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
   server.close(() => {
     console.log('Process terminated.');
+    process.exit(0);
   });
+  setTimeout(() => process.exit(0), 1000).unref();
 });
+
+process.on('SIGINT', () => {
+  server.close(() => {
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(0), 1000).unref();
+});
+

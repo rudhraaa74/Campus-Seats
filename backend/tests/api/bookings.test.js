@@ -111,6 +111,27 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
       expect(ttl).toBeLessThanOrEqual(300);
     });
 
+    it('successfully holds 3 seats for a student, auto-assigning guest rates when subsidy is already used', async () => {
+      const res = await request(app)
+        .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({
+          show_id: 1,
+          tickets: [
+            { row_label: 'E', seat_no: 1 },
+            { row_label: 'E', seat_no: 2 },
+            { row_label: 'E', seat_no: 3 },
+          ],
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.booking.tickets.length).toBe(3);
+      // Since student already holds a student ticket on show 1 from previous test, all 3 are GUEST
+      expect(res.body.booking.tickets[0].attendee_type).toBe('GUEST');
+      expect(res.body.booking.tickets[1].attendee_type).toBe('GUEST');
+      expect(res.body.booking.tickets[2].attendee_type).toBe('GUEST');
+    });
+
     it('rejects attempt to hold an already held seat (SEAT_TAKEN)', async () => {
       const res = await request(app)
         .post('/api/v1/bookings')

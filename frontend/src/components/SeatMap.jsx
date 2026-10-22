@@ -92,7 +92,17 @@ export function SeatMap({
         setSelectionError('You can select a maximum of 6 tickets per booking (Rule BR6).');
         return;
       }
-      const defaultType = user?.user_type ? user.user_type.toUpperCase() : 'STUDENT';
+      const userTier = user?.user_type ? user.user_type.toUpperCase() : 'STUDENT';
+      // Under Rule BR14, each attendee gets at most 1 subsidized ticket (STUDENT or FACULTY).
+      // If a subsidized ticket is already selected, additional seats automatically default to GUEST.
+      const hasSubsidized = selectedSeats.some(
+        (s) => (s.attendee_type === 'STUDENT' || s.attendee_type === 'FACULTY')
+      );
+      const defaultType =
+        (userTier === 'STUDENT' || userTier === 'FACULTY')
+          ? (hasSubsidized ? 'GUEST' : userTier)
+          : 'GUEST';
+
       setSelectedSeats((prev) => [
         ...prev,
         {
@@ -108,6 +118,19 @@ export function SeatMap({
 
   // Change attendee type for a selected seat
   const handleAttendeeTypeChange = (rowLabel, seatNo, newType) => {
+    if (newType === 'STUDENT' || newType === 'FACULTY') {
+      const alreadyHas = selectedSeats.some(
+        (s) => (s.attendee_type === 'STUDENT' || s.attendee_type === 'FACULTY') &&
+               !(s.row_label === rowLabel && s.seat_no === seatNo)
+      );
+      if (alreadyHas) {
+        setSelectionError(
+          `Rule BR14: Only 1 subsidized ${newType} ticket is allowed per person per show. Additional tickets must be GUEST.`
+        );
+        return;
+      }
+    }
+    setSelectionError('');
     setSelectedSeats((prev) =>
       prev.map((s) =>
         s.row_label === rowLabel && s.seat_no === seatNo
@@ -171,7 +194,12 @@ export function SeatMap({
       } else if (err.code === 'TICKET_LIMIT') {
         setSelectionError(err.message || 'Maximum 6 tickets allowed per booking.');
       } else if (err.code === 'SUBSIDY_LIMIT') {
-        setSelectionError(err.message || 'You have already used your subsidized ticket for this show.');
+        setSelectionError(
+          'Campus Rule BR14: You already have a subsidized Student ticket for this show. We have switched your additional tickets to Guest rate so you can proceed.'
+        );
+        setSelectedSeats((prev) =>
+          prev.map((s) => ({ ...s, attendee_type: 'GUEST' }))
+        );
       } else {
         setSelectionError(err.message || 'Failed to hold seats. Please try again.');
       }
@@ -745,51 +773,86 @@ export function SeatMap({
                       {s.row_label}
                     </span>
                     <div>
-                      <div className="font-bold text-slate-900">
-                        Row {s.row_label}, Seat {s.seat_no}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900">
+                          Row {s.row_label}, Seat {s.seat_no}
+                        </span>
+                        {s.attendee_type === 'STUDENT' || s.attendee_type === 'FACULTY' ? (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800">
+                            Subsidized
+                          </span>
+                        ) : (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold bg-slate-100 text-slate-600">
+                            Guest
+                          </span>
+                        )}
                       </div>
                       <div className="text-[11px] text-slate-500">{s.category_name} Tier</div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={s.attendee_type}
-                      onChange={(e) =>
-                        handleAttendeeTypeChange(s.row_label, s.seat_no, e.target.value)
-                      }
-                      className="px-2 py-1 rounded-md border border-slate-300 text-[11px] font-semibold bg-slate-50 text-slate-800"
-                    >
-                      <option value="STUDENT">Student</option>
-                      <option value="FACULTY">Faculty</option>
-                      <option value="GUEST">Guest</option>
-                    </select>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={s.attendee_type}
+                    onChange={(e) =>
+                      handleAttendeeTypeChange(s.row_label, s.seat_no, e.target.value)
+                    }
+                    className="px-2 py-1 rounded-md border border-slate-300 text-[11px] font-semibold bg-slate-50 text-slate-800"
+                  >
+                    <option value="STUDENT">Student</option>
+                    <option value="FACULTY">Faculty</option>
+                    <option value="GUEST">Guest</option>
+                  </select>
 
-                    <span className="font-bold text-slate-900 min-w-[36px] text-right">
-                      ₹{price}
-                    </span>
+                  <span className="font-bold text-slate-900 min-w-[36px] text-right">
+                    ₹{price}
+                  </span>
 
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSeat(s.row_label, s.seat_no)}
-                      className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-100"
-                      title="Remove seat"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSeat(s.row_label, s.seat_no)}
+                    className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-100"
+                    title="Remove seat"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
+        </div>
 
-          {/* Hold Button */}
-          <button
-            type="button"
-            disabled={isSubmitting}
-            onClick={handleCreateHold}
-            className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
-          >
+        {/* Policy Note */}
+        <div className="mb-4 flex items-center justify-between text-[11px] text-slate-500 bg-white/70 p-2.5 rounded-xl border border-slate-200">
+          <span className="flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+            <span>Campus Rule BR14: 1 subsidized ticket per student; additional tickets are booked at the guest rate.</span>
+          </span>
+          <span className="font-semibold text-slate-700">Max 6 tickets</span>
+        </div>
+
+        {/* Inline Selection Error Banner right above Hold Button */}
+        {selectionError && (
+          <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 font-medium">{selectionError}</div>
+            <button
+              type="button"
+              onClick={() => setSelectionError('')}
+              className="text-red-400 hover:text-red-600"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Hold Button */}
+        <button
+          type="button"
+          disabled={isSubmitting}
+          onClick={handleCreateHold}
+          className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+        >
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />

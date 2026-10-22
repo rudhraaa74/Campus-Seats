@@ -83,10 +83,10 @@ export function mapDatabaseError(err) {
     if (err.message.includes('capacity')) {
       errorCode = 'CAPACITY_FULL';
       status = 409;
-    } else if (err.message.includes('6') || err.message.toLowerCase().includes('limit')) {
+    } else if (err.message.includes('6') || (err.message.toLowerCase().includes('limit') && !err.message.toLowerCase().includes('subsid'))) {
       errorCode = 'TICKET_LIMIT';
       status = 422;
-    } else if (err.message.includes('subsidised STUDENT ticket')) {
+    } else if (err.message.toLowerCase().includes('subsidised') || err.message.toLowerCase().includes('subsidized')) {
       errorCode = 'SUBSIDY_LIMIT';
       status = 422;
     } else if (err.message.toLowerCase().includes('window') || err.message.toLowerCase().includes('cancelled') || err.message.toLowerCase().includes('past')) {

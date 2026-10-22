@@ -60,9 +60,37 @@ export async function createHold({ userId, userType, showId, tickets = [], ticke
         throw error;
       }
 
+      // Check if user already holds a subsidized ticket for this show (Rule BR14)
+      const primaryType = (userType || 'STUDENT').toUpperCase();
+      let hasAllocatedSubsidized = false;
+
+      if (primaryType === 'STUDENT' || primaryType === 'FACULTY') {
+        const existingCheck = await client.query(
+          `SELECT 1 FROM ticket t
+           JOIN booking b ON t.booking_id = b.booking_id
+           WHERE b.user_id = $1 AND t.show_id = $2
+             AND t.attendee_type = $3
+             AND t.status IN ('HELD', 'ACTIVE')
+           LIMIT 1;`,
+          [userId, showId, primaryType]
+        );
+        hasAllocatedSubsidized = existingCheck.rows.length > 0;
+      }
+
       for (const t of tickets) {
-        // Default attendee_type to user's registered user_type if not provided
-        const attendeeType = (t.attendee_type || userType || 'STUDENT').toUpperCase();
+        let attendeeType = t.attendee_type ? t.attendee_type.toUpperCase() : null;
+
+        // If attendeeType was not explicitly provided:
+        // Auto-assign the first ticket as user's subsidized tier (if available) and subsequent tickets as GUEST.
+        if (!attendeeType) {
+          if (!hasAllocatedSubsidized && (primaryType === 'STUDENT' || primaryType === 'FACULTY')) {
+            attendeeType = primaryType;
+            hasAllocatedSubsidized = true;
+          } else {
+            attendeeType = 'GUEST';
+          }
+        }
+
         await queries.createHeldTicket(client, {
           bookingId: newBooking.booking_id,
           showId,
@@ -82,14 +110,36 @@ export async function createHold({ userId, userType, showId, tickets = [], ticke
         throw error;
       }
 
+      const primaryType = (userType || 'STUDENT').toUpperCase();
+      let hasAllocatedSubsidized = false;
+
+      if (primaryType === 'STUDENT' || primaryType === 'FACULTY') {
+        const existingCheck = await client.query(
+          `SELECT 1 FROM ticket t
+           JOIN booking b ON t.booking_id = b.booking_id
+           WHERE b.user_id = $1 AND t.show_id = $2
+             AND t.attendee_type = $3
+             AND t.status IN ('HELD', 'ACTIVE')
+           LIMIT 1;`,
+          [userId, showId, primaryType]
+        );
+        hasAllocatedSubsidized = existingCheck.rows.length > 0;
+      }
+
       for (let i = 0; i < count; i++) {
+        let attendeeType = 'GUEST';
+        if (!hasAllocatedSubsidized && (primaryType === 'STUDENT' || primaryType === 'FACULTY')) {
+          attendeeType = primaryType;
+          hasAllocatedSubsidized = true;
+        }
+
         await queries.createHeldTicket(client, {
           bookingId: newBooking.booking_id,
           showId,
           venueId: show.venue_id,
           rowLabel: null,
           seatNo: null,
-          attendeeType: (userType || 'STUDENT').toUpperCase(),
+          attendeeType,
         });
       }
     }
