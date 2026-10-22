@@ -14,6 +14,7 @@ import { ShowDetail } from './pages/ShowDetail.jsx';
 import { Checkout } from './pages/Checkout.jsx';
 import { MyBookings } from './pages/MyBookings.jsx';
 import { OrganizerDashboard } from './pages/organizer/OrganizerDashboard.jsx';
+import { ReportsDashboard } from './pages/organizer/ReportsDashboard.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 
 export default function App() {
@@ -74,6 +75,22 @@ export default function App() {
                 element={
                   <ProtectedRoute requireClubManager>
                     <OrganizerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/organizer/reports"
+                element={
+                  <ProtectedRoute requireClubManager>
+                    <ReportsDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reports"
+                element={
+                  <ProtectedRoute requireClubManager>
+                    <ReportsDashboard />
                   </ProtectedRoute>
                 }
               />

@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../api/client.js';
 import {
@@ -23,6 +24,7 @@ import {
   Ban,
   Building2,
   Layers,
+  BarChart3,
   Edit,
 } from 'lucide-react';
 
@@ -266,6 +268,13 @@ export function OrganizerDashboard() {
         </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            to="/organizer/reports"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold shadow-xs transition-all"
+          >
+            <BarChart3 className="w-4 h-4 text-purple-700" />
+            Analytics & Reports
+          </Link>
           <button
             type="button"
             onClick={() => handleOpenEventModal()}

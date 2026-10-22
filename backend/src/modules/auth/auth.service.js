@@ -194,6 +194,7 @@ export async function getUserProfile(userId) {
 
   const clubsRes = await pool.query(authQueries.findManagedClubs, [userId]);
   user.clubs = clubsRes.rows;
+  user.clubIds = clubsRes.rows.map((row) => row.club_id);
 
   return user;
 }

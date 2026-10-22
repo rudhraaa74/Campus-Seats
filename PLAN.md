@@ -369,7 +369,7 @@ Owners are suggestions; change them if the team agrees. Phases 5 and 6 run in pa
 **Goal:** the complex retrieval workflow, with the queries needed for the course requirements.
 
 **Database — Harshitha**
-- [ ] `database/queries/reports.sql` with at least five non-trivial queries, for example:
+- [x] `database/queries/reports.sql` with at least five non-trivial queries, for example:
 
 | # | Query | Techniques |
 |---|---|---|
@@ -379,13 +379,13 @@ Owners are suggestions; change them if the team agrees. Phases 5 and 6 run in pa
 | 4 | Shows with seats still free / no live tickets | correlated subquery, `NOT EXISTS` |
 | 5 | Most active attendees (more than N bookings) | `GROUP BY`, `HAVING` |
 
-- [ ] Reporting views for occupancy and revenue.
+- [x] Reporting views for occupancy and revenue.
 
 **Backend (`modules/reports`) — Pranay**
-- [ ] `GET /reports/occupancy`, `/reports/revenue`, `/reports/top-events`, restricted to club managers and limited to their own clubs.
+- [x] `GET /reports/occupancy`, `/reports/revenue`, `/reports/top-events`, restricted to club managers and limited to their own clubs.
 
 **Front end — Pranay**
-- [ ] `Dashboard.jsx` with tables and charts (`ReportCharts`), filters by event and date.
+- [x] `Dashboard.jsx` with tables and charts (`ReportCharts`), filters by event and date.
 
 **Checkpoint (W5 done):** the dashboard numbers match hand-checked counts in `psql`.
 

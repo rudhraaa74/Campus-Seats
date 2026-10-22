@@ -6,7 +6,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Ticket, User, LogOut, Calendar, PlusCircle, BarChart3 } from 'lucide-react';
+import { Ticket, User, LogOut, Calendar, PlusCircle, BarChart3, TrendingUp } from 'lucide-react';
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -60,15 +60,15 @@ export function Navbar() {
                     to="/organizer/dashboard"
                     className="inline-flex items-center px-3 py-2 text-sm font-medium text-purple-700 hover:text-purple-900 transition"
                   >
-                    <BarChart3 className="w-4 h-4 mr-1.5" />
-                    Club Dashboard
+                    <PlusCircle className="w-4 h-4 mr-1.5" />
+                    Manage Shows
                   </Link>
                   <Link
-                    to="/organizer/events/new"
+                    to="/organizer/reports"
                     className="inline-flex items-center px-3 py-2 text-sm font-medium text-purple-700 hover:text-purple-900 transition"
                   >
-                    <PlusCircle className="w-4 h-4 mr-1.5" />
-                    New Event
+                    <TrendingUp className="w-4 h-4 mr-1.5" />
+                    Analytics & Reports
                   </Link>
                 </>
               )}

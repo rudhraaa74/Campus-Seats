@@ -16,6 +16,7 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
 
   beforeAll(async () => {
     // Clean up any lingering test records
+    await pool.query(`DELETE FROM payment WHERE booking_id IN (SELECT booking_id FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%'));`);
     await pool.query(`DELETE FROM ticket WHERE booking_id IN (SELECT booking_id FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%'));`);
     await pool.query(`DELETE FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%');`);
     await pool.query(`DELETE FROM users WHERE email LIKE 'booking.%';`);
@@ -60,17 +61,7 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
     guestToken = guestRes.body.token;
   });
 
-  afterAll(async () => {
-    try {
-      await pool.query(`DELETE FROM ticket WHERE booking_id IN (SELECT booking_id FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%'));`);
-      await pool.query(`DELETE FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%');`);
-      await pool.query(`DELETE FROM users WHERE email LIKE 'booking.%';`);
-    } catch (e) {
-      // ignore teardown errors
-    }
-    await pool.end();
-    redis.disconnect();
-  });
+
 
   // 1. Authentication requirement
   describe('Authorization checks', () => {
@@ -285,5 +276,12 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
       expect(Array.isArray(res.body.bookings)).toBe(true);
       expect(res.body.bookings.length).toBeGreaterThanOrEqual(1);
     });
+  });
+
+  afterAll(async () => {
+    await pool.query(`DELETE FROM payment WHERE booking_id IN (SELECT booking_id FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%'));`);
+    await pool.query(`DELETE FROM ticket WHERE booking_id IN (SELECT booking_id FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%'));`);
+    await pool.query(`DELETE FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%');`);
+    await pool.query(`DELETE FROM users WHERE email LIKE 'booking.%';`);
   });
 });
