@@ -76,20 +76,16 @@ ON CONFLICT (category_id) DO NOTHING;
 
 ALTER SEQUENCE seat_category_category_id_seq RESTART WITH 5;
 
--- 6. AUDITORIUM SEATS (Main Auditorium: Rows A & B = Gold, Rows C & D = Silver)
--- Total 40 numbered seats
+-- 6. AUDITORIUM SEATS (Main Auditorium: 500 numbered seats)
+-- Main Floor / Stalls (Rows A to N = 14 rows * 25 seats = 350 seats, Silver = category 2)
 INSERT INTO seat (venue_id, row_label, seat_no, category_id)
-SELECT 1, 'A', s, 1 FROM generate_series(1, 10) AS s
+SELECT 1, chr(65 + r), s, 2
+FROM generate_series(0, 13) AS r, generate_series(1, 25) AS s
 ON CONFLICT (venue_id, row_label, seat_no) DO NOTHING;
 
+-- Balcony / Upper Tier (Rows O to T = 6 rows * 25 seats = 150 seats, Gold = category 1)
 INSERT INTO seat (venue_id, row_label, seat_no, category_id)
-SELECT 1, 'B', s, 1 FROM generate_series(1, 10) AS s
+SELECT 1, chr(79 + r), s, 1
+FROM generate_series(0, 5) AS r, generate_series(1, 25) AS s
 ON CONFLICT (venue_id, row_label, seat_no) DO NOTHING;
 
-INSERT INTO seat (venue_id, row_label, seat_no, category_id)
-SELECT 1, 'C', s, 2 FROM generate_series(1, 10) AS s
-ON CONFLICT (venue_id, row_label, seat_no) DO NOTHING;
-
-INSERT INTO seat (venue_id, row_label, seat_no, category_id)
-SELECT 1, 'D', s, 2 FROM generate_series(1, 10) AS s
-ON CONFLICT (venue_id, row_label, seat_no) DO NOTHING;

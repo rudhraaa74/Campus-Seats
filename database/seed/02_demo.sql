@@ -56,12 +56,12 @@ VALUES
 ON CONFLICT (show_id, category_id, user_type) DO NOTHING;
 
 -- 4. BOOKINGS
--- Booking 1: Confirmed booking by Rudhra (user 2) for Show 1
+-- Booking 1: Confirmed booking by Rudhra (user 2) for Show 1 (Gold seats O-1, O-2: 100 + 250 = 350)
 INSERT INTO booking (booking_id, user_id, show_id, booked_at, hold_expires_at, status, total_amount)
 VALUES
     (1, 2, 1, CURRENT_TIMESTAMP - INTERVAL '1 hour', CURRENT_TIMESTAMP - INTERVAL '55 minutes', 'CONFIRMED', 350.00),
-    -- Booking 2: Active pending hold by Areesha (user 3) for Show 1
-    (2, 3, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '5 minutes', 'PENDING', 100.00),
+    -- Booking 2: Active pending hold by Areesha (user 3) for Show 1 (Silver seat B-5: 60)
+    (2, 3, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '5 minutes', 'PENDING', 60.00),
     -- Booking 3: Confirmed classroom booking by Faculty Ramesh (user 4) for Show 3
     (3, 4, 3, CURRENT_TIMESTAMP - INTERVAL '30 minutes', CURRENT_TIMESTAMP - INTERVAL '25 minutes', 'CONFIRMED', 50.00)
 ON CONFLICT (booking_id) DO NOTHING;
@@ -71,14 +71,15 @@ ALTER SEQUENCE booking_booking_id_seq RESTART WITH 4;
 -- 5. TICKETS
 INSERT INTO ticket (ticket_id, booking_id, show_id, venue_id, row_label, seat_no, attendee_type, price_paid, status)
 VALUES
-    -- Tickets for Booking 1 (Auditorium: Seats A-1 and A-2)
-    (1, 1, 1, 1, 'A', 1, 'STUDENT', 100.00, 'ACTIVE'),
-    (2, 1, 1, 1, 'A', 2, 'GUEST', 250.00, 'ACTIVE'),
-    -- Ticket for Booking 2 (Auditorium: Seat B-1 on hold)
-    (3, 2, 1, 1, 'B', 1, 'STUDENT', 100.00, 'HELD'),
+    -- Tickets for Booking 1 (Auditorium: Gold seats O-1 and O-2)
+    (1, 1, 1, 1, 'O', 1, 'STUDENT', 100.00, 'ACTIVE'),
+    (2, 1, 1, 1, 'O', 2, 'GUEST', 250.00, 'ACTIVE'),
+    -- Ticket for Booking 2 (Auditorium: Silver seat B-5 on hold)
+    (3, 2, 1, 1, 'B', 5, 'STUDENT', 60.00, 'HELD'),
     -- Ticket for Booking 3 (Classroom: general admission, no seat numbers)
     (4, 3, 3, 2, NULL, NULL, 'FACULTY', 50.00, 'ACTIVE')
 ON CONFLICT (ticket_id) DO NOTHING;
+
 
 ALTER SEQUENCE ticket_ticket_id_seq RESTART WITH 5;
 

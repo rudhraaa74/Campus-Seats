@@ -125,19 +125,19 @@ describe('Browse Module API Tests (Phase 3)', () => {
       expect(res.body.venue_type).toBe('auditorium');
       expect(res.body).toHaveProperty('seats');
       expect(Array.isArray(res.body.seats)).toBe(true);
-      expect(res.body.seats.length).toBe(40); // 40 numbered seats
+      expect(res.body.seats.length).toBe(500); // 500 numbered seats in Main Auditorium
 
-      // Verify that confirmed ticket seats A-1 and A-2 are marked 'sold'
+      // Verify that confirmed ticket seats O-1 and O-2 (Gold) are marked 'sold'
+      const seatO1 = res.body.seats.find((s) => s.row_label === 'O' && s.seat_no === 1);
+      const seatO2 = res.body.seats.find((s) => s.row_label === 'O' && s.seat_no === 2);
       const seatA1 = res.body.seats.find((s) => s.row_label === 'A' && s.seat_no === 1);
-      const seatA2 = res.body.seats.find((s) => s.row_label === 'A' && s.seat_no === 2);
-      const seatA3 = res.body.seats.find((s) => s.row_label === 'A' && s.seat_no === 3);
 
+      expect(seatO1).toBeDefined();
+      expect(seatO1.status).toBe('sold');
+      expect(seatO2).toBeDefined();
+      expect(seatO2.status).toBe('sold');
       expect(seatA1).toBeDefined();
-      expect(seatA1.status).toBe('sold');
-      expect(seatA2).toBeDefined();
-      expect(seatA2.status).toBe('sold');
-      expect(seatA3).toBeDefined();
-      expect(seatA3.status).toBe('free');
+      expect(seatA1.status).toBe('free');
     });
 
     it('returns classroom general admission capacity and remaining slots for Show 3', async () => {
