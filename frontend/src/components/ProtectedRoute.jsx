@@ -23,12 +23,19 @@ export function ProtectedRoute({ children, allowedRoles, requireClubManager }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (requireClubManager && (!user.clubIds || user.clubIds.length === 0)) {
-    return <Navigate to="/" replace />;
+  const isClubManager = Boolean(
+    user && (
+      (Array.isArray(user.clubIds) && user.clubIds.length > 0) ||
+      (Array.isArray(user.clubs) && user.clubs.length > 0)
+    )
+  );
+
+  if (requireClubManager && !isClubManager) {
+    return <Navigate to="/events" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.user_type)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/events" replace />;
   }
 
   return children;

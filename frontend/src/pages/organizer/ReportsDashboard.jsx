@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../api/client.js';
 import {
@@ -26,6 +27,19 @@ import { OccupancyChart, RevenueBreakdownChart, TopEventsRankingTable } from '..
 
 export function ReportsDashboard() {
   const { user } = useAuth();
+
+  const isClubManager = Boolean(
+    user && (
+      (Array.isArray(user.clubIds) && user.clubIds.length > 0) ||
+      (Array.isArray(user.clubs) && user.clubs.length > 0)
+    )
+  );
+
+  // If not a club manager, immediately redirect to /events without showing anything
+  if (!isClubManager) {
+    return <Navigate to="/events" replace />;
+  }
+
   const [activeTab, setActiveTab] = useState('occupancy');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

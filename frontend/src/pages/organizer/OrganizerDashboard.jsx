@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../api/client.js';
 import {
@@ -30,6 +30,18 @@ import {
 
 export function OrganizerDashboard() {
   const { user } = useAuth();
+
+  const isClubManager = Boolean(
+    user && (
+      (Array.isArray(user.clubIds) && user.clubIds.length > 0) ||
+      (Array.isArray(user.clubs) && user.clubs.length > 0)
+    )
+  );
+
+  // If not a club manager, immediately redirect to /events without showing anything
+  if (!isClubManager) {
+    return <Navigate to="/events" replace />;
+  }
 
   const [events, setEvents] = useState([]);
   const [venues, setVenues] = useState([]);

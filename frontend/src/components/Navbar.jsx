@@ -17,7 +17,12 @@ export function Navbar() {
     navigate('/login');
   };
 
-  const isClubManager = user && user.clubIds && user.clubIds.length > 0;
+  const isClubManager = Boolean(
+    user && (
+      (Array.isArray(user.clubIds) && user.clubIds.length > 0) ||
+      (Array.isArray(user.clubs) && user.clubs.length > 0)
+    )
+  );
 
   return (
     <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -83,9 +88,15 @@ export function Navbar() {
                   <div className="text-sm font-semibold text-slate-900">
                     {user.first_name} {user.last_name || ''}
                   </div>
-                  <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700">
-                    {user.user_type}
-                  </span>
+                  {isClubManager ? (
+                    <span className="inline-block px-2 py-0.5 text-xs font-bold rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                      CLUB MANAGER
+                    </span>
+                  ) : (
+                    <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700">
+                      {user.user_type}
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={handleLogout}
