@@ -53,8 +53,9 @@ export const authQueries = {
   `,
 
   findManagedClubs: `
-    SELECT club_id, role
-    FROM club_manager
-    WHERE user_id = $1;
+    SELECT cm.club_id, cm.role, c.name AS club_name
+    FROM club_manager cm
+    JOIN club c ON cm.club_id = c.club_id
+    WHERE cm.user_id = $1;
   `,
 };

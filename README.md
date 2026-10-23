@@ -301,7 +301,11 @@ All test accounts use the standard demo password: **`Password123!`**
 
 | Role | Email | Password | Privileges & Key Workflows |
 |---|---|---|---|
-| **Club Manager** | `manager@seatsync.ac.in` | `Password123!` | Create events, schedule shows (Auditorium & Classroom), set prices, view reports dashboard |
+| **Club Manager (Music Club)** | `manager@seatsync.ac.in` | `Password123!` | Music Club manager; creates events/shows, configures pricing, views Music Club analytics |
+| **Club Manager (Drama Society)** | `drama.head@seatsync.ac.in` | `Password123!` | Drama Society manager; views The Tempest / Standup Comedy reports and ticket revenue |
+| **Club Manager (Literary Society)** | `lit.head@seatsync.ac.in` | `Password123!` | Literary Society manager; views Debate / Poetry events and attendance reports |
+| **Club Manager (Tech Club)** | `tech.head@seatsync.ac.in` | `Password123!` | Tech & Robotics manager; organizes hackathons, manages classroom capacities |
+| **Club Manager (Sports Council)** | `sports.head@seatsync.ac.in` | `Password123!` | Sports Council manager; manages Open Air Amphitheatre matches |
 | **Student Attendee** | `student1@seatsync.ac.in` | `Password123!` | Book auditorium seats / classroom passes at student rate; see student-only events |
 | **Faculty Attendee** | `faculty@seatsync.ac.in` | `Password123!` | Book tickets at faculty rate; view booking history & cancellations |
 | **Guest Attendee** | `guest@seatsync.ac.in` | `Password123!` | General public bookings; restricted from student-only shows |

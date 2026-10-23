@@ -126,17 +126,20 @@ export function ReportsDashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
               Club Manager Analytics
             </span>
-            <span className="text-xs text-slate-500">• Phase 6 (Workflow W5)</span>
+            <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Managing: {user?.clubs?.map((c) => c.club_name || `Club #${c.club_id}`).join(', ') || 'Music Club'}
+            </span>
+            <span className="text-xs text-slate-500">• Workflow W5</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
             Performance Analytics & Course Reports
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Real-time PostgreSQL aggregate metrics, window functions, and multi-table analytical queries.
+            Real-time PostgreSQL aggregate metrics, window functions, and multi-table analytical queries for <strong>{user?.clubs?.map((c) => c.club_name).join(', ') || 'Music Club'}</strong>.
           </p>
         </div>
 
@@ -156,6 +159,16 @@ export function ReportsDashboard() {
           <div className="text-sm text-rose-800 font-medium">{error}</div>
         </div>
       )}
+
+      {/* Club Data Scope Note */}
+      <div className="mt-4 p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs text-slate-600">
+        <div className="flex items-center gap-2">
+          <Layers className="w-4 h-4 text-purple-600 shrink-0" />
+          <span>
+            <strong>DBMS Scope:</strong> Metrics reflect events organized by <strong>{user?.clubs?.map((c) => c.club_name).join(', ') || 'Music Club'}</strong>. Bookings and ticket revenue for events of other clubs (e.g. Drama Society, Literary Society) are isolated to their respective club manager accounts per Rule BR11.
+          </span>
+        </div>
+      </div>
 
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">

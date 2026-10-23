@@ -174,6 +174,7 @@ export async function loginUser(email, password) {
       last_name: user.last_name,
       user_type: user.user_type,
       clubIds,
+      clubs: clubsRes.rows,
     },
   };
 }
