@@ -261,13 +261,12 @@ export async function payBooking({ bookingId, userId, paymentMethod = 'UPI', sim
   // 10. Notify live SSE clients watching this show
   notifyShowUpdated(result.booking.show_id);
 
+  // Retrieve complete detailed booking (event, show, venue, tickets)
+  const detailed = await getBookingDetail(bookingId, userId);
+
   return {
     booking: {
-      booking_id: result.booking.booking_id,
-      user_id: result.booking.user_id,
-      show_id: result.booking.show_id,
-      status: result.booking.status,
-      total_amount: parseFloat(result.booking.total_amount),
+      ...detailed.booking,
       payment: {
         payment_id: result.payment.payment_id,
         amount: parseFloat(result.payment.amount),

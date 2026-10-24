@@ -95,8 +95,25 @@ export function Checkout() {
         simulate_failure: simulateFailure,
       });
 
-      setBooking(res.booking);
-      setConfirmedPayment(res.booking.payment);
+      // Preserve previously loaded show & venue metadata and tickets
+      const updatedBooking = {
+        ...(booking || {}),
+        ...res.booking,
+      };
+      if (!res.booking?.tickets && booking?.tickets) {
+        updatedBooking.tickets = booking.tickets;
+      }
+
+      setBooking(updatedBooking);
+      setConfirmedPayment(
+        res.booking.payment || {
+          payment_id: res.booking.payment_id,
+          amount: res.booking.paid_amount || res.booking.total_amount,
+          payment_method: res.booking.payment_method || paymentMethod,
+          gateway_ref: res.booking.gateway_ref,
+          paid_at: res.booking.paid_at || new Date().toISOString(),
+        }
+      );
     } catch (err) {
       if (err.code === 'HOLD_EXPIRED') {
         setIsExpired(true);
