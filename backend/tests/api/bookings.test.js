@@ -123,6 +123,46 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
       expect(res.body.booking.tickets[2].attendee_type).toBe('STUDENT');
     });
 
+    it('successfully holds general admission tickets for a classroom show with FACULTY attendee type at faculty rate', async () => {
+      const res = await request(app)
+        .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({
+          show_id: 3,
+          ticket_count: 2,
+          attendee_type: 'FACULTY',
+          tickets: [
+            { attendee_type: 'FACULTY' },
+            { attendee_type: 'FACULTY' },
+          ],
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.booking.tickets.length).toBe(2);
+      expect(res.body.booking.tickets[0].attendee_type).toBe('FACULTY');
+      expect(res.body.booking.tickets[0].price).toBe(50);
+      expect(res.body.booking.tickets[1].attendee_type).toBe('FACULTY');
+      expect(res.body.booking.tickets[1].price).toBe(50);
+      expect(res.body.booking.total_amount).toBe(100);
+    });
+
+    it('successfully holds general admission tickets for GUEST when passing attendee_type without tickets array', async () => {
+      const res = await request(app)
+        .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({
+          show_id: 3,
+          ticket_count: 1,
+          attendee_type: 'GUEST',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.booking.tickets.length).toBe(1);
+      expect(res.body.booking.tickets[0].attendee_type).toBe('GUEST');
+      expect(res.body.booking.tickets[0].price).toBe(80);
+      expect(res.body.booking.total_amount).toBe(80);
+    });
+
     it('rejects attempt to hold an already held seat (SEAT_TAKEN)', async () => {
       const res = await request(app)
         .post('/api/v1/bookings')

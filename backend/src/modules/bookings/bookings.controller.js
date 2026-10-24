@@ -11,7 +11,7 @@ import * as bookingsService from './bookings.service.js';
  */
 export async function createBooking(req, res, next) {
   try {
-    const { show_id, tickets, ticket_count } = req.body;
+    const { show_id, tickets, ticket_count, attendee_type } = req.body;
     const userId = req.user.userId;
     const userType = req.user.userType;
 
@@ -21,6 +21,7 @@ export async function createBooking(req, res, next) {
       showId: parseInt(show_id, 10),
       tickets,
       ticketCount: ticket_count,
+      attendeeType: attendee_type,
     });
 
     return res.status(201).json(result);

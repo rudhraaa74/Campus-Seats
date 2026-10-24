@@ -143,10 +143,14 @@ export function SeatMap({
         const capacity = classroomData?.capacity || 0;
         const remaining = classroomData?.remaining ?? capacity;
         const maxPasses = Math.max(0, Math.min(6, remaining));
+        const count = Math.min(classroomQty, maxPasses || 1);
         payload = {
           show_id: showId,
-          ticket_count: Math.min(classroomQty, maxPasses || 1),
-          tickets: [],
+          ticket_count: count,
+          attendee_type: classroomAttendeeType,
+          tickets: Array.from({ length: count }, () => ({
+            attendee_type: classroomAttendeeType,
+          })),
         };
       } else {
         if (selectedSeats.length === 0) {

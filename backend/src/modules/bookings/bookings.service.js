@@ -12,7 +12,7 @@ import { notifyShowUpdated } from '../../events/seatEvents.js';
  * Creates a 5-minute seat hold (PENDING booking + HELD tickets) in a transaction,
  * and sets the Redis hold timer only after transaction commit.
  */
-export async function createHold({ userId, userType, showId, tickets = [], ticketCount = 1 }) {
+export async function createHold({ userId, userType, showId, tickets = [], ticketCount = 1, attendeeType }) {
   if (!showId) {
     const error = new Error('show_id is required.');
     error.status = 400;
@@ -60,7 +60,9 @@ export async function createHold({ userId, userType, showId, tickets = [], ticke
 
     // Insert HELD tickets
     // Case A: Auditorium (seat list with row_label and seat_no)
-    if (tickets && tickets.length > 0) {
+    const isAuditorium = tickets && tickets.length > 0 && (tickets[0].row_label != null || tickets[0].seat_no != null || tickets[0].seat_number != null);
+
+    if (isAuditorium) {
       if (tickets.length > 6) {
         const error = new Error('A maximum of 6 tickets can be booked at once.');
         error.status = 422;
@@ -68,11 +70,11 @@ export async function createHold({ userId, userType, showId, tickets = [], ticke
         throw error;
       }
 
-      const primaryType = (userType || 'STUDENT').toUpperCase();
+      const primaryType = (attendeeType || userType || 'STUDENT').toUpperCase();
 
       for (const t of tickets) {
-        // Default to user's registered type (students book for other students at student rate)
-        const attendeeType = (t.attendee_type || primaryType).toUpperCase();
+        // Default to specified attendee_type, or request attendeeType, or user's registered type
+        const tAttendeeType = (t.attendee_type || primaryType).toUpperCase();
 
         await queries.createHeldTicket(client, {
           bookingId: newBooking.booking_id,
@@ -80,12 +82,12 @@ export async function createHold({ userId, userType, showId, tickets = [], ticke
           venueId: show.venue_id,
           rowLabel: t.row_label,
           seatNo: t.seat_no || t.seat_number,
-          attendeeType,
+          attendeeType: tAttendeeType,
         });
       }
     } else {
       // Case B: Classroom general admission
-      const count = Math.max(1, parseInt(ticketCount, 10) || 1);
+      const count = Math.max(1, parseInt(ticketCount, 10) || (tickets && tickets.length ? tickets.length : 1));
       if (count > 6) {
         const error = new Error('A maximum of 6 tickets can be booked at once.');
         error.status = 422;
@@ -93,15 +95,27 @@ export async function createHold({ userId, userType, showId, tickets = [], ticke
         throw error;
       }
 
-      const primaryType = (userType || 'STUDENT').toUpperCase();
+      // Priority: explicit attendeeType -> tickets[0].attendee_type -> userType -> STUDENT
+      const defaultType = (
+        attendeeType ||
+        (tickets && tickets[0]?.attendee_type) ||
+        userType ||
+        'STUDENT'
+      ).toUpperCase();
+
       for (let i = 0; i < count; i++) {
+        const tType = (
+          (tickets && tickets[i]?.attendee_type) ||
+          defaultType
+        ).toUpperCase();
+
         await queries.createHeldTicket(client, {
           bookingId: newBooking.booking_id,
           showId,
           venueId: show.venue_id,
           rowLabel: null,
           seatNo: null,
-          attendeeType: primaryType,
+          attendeeType: tType,
         });
       }
     }
