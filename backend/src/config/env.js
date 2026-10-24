@@ -38,6 +38,28 @@ export const env = {
     secret: process.env.JWT_SECRET || 'seatsync-super-secret-jwt-key-2026',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
+
+  // Email & OTP verification configuration
+  otp: {
+    ttlSeconds: 600, // 10 minutes
+    resendCooldownSeconds: 60, // 1 minute
+    maxAttempts: 5,
+    demoMode: process.env.DEMO_MODE !== 'false', // Defaults to true in dev for demo safety
+  },
+
+  campus: {
+    allowedDomains: (process.env.CAMPUS_EMAIL_DOMAINS || 'campus.ac.in,seatsync.ac.in')
+      .split(',')
+      .map((d) => d.trim().toLowerCase()),
+  },
+
+  smtp: {
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.SMTP_FROM || 'SeatSync <no-reply@seatsync.ac.in>',
+  },
 };
 
 // Validate critical production configurations

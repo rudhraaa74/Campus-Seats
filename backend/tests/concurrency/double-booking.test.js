@@ -33,6 +33,11 @@ describe('Concurrency Check: Double Booking Race Condition', () => {
         });
       tokens.push(res.body.token);
     }
+
+    // Mark test users as verified so DB trigger permits booking
+    await pool.query(
+      `UPDATE users SET verified_at = CURRENT_TIMESTAMP WHERE email LIKE 'race.user.%';`
+    );
   }, 15000);
 
   afterAll(async () => {

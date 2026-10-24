@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // backend/src/modules/auth/auth.controller.js
-// Request handlers for authentication endpoints
+// Request handlers for authentication & OTP verification endpoints
 // ─────────────────────────────────────────────────────────────
 
 import * as authService from './auth.service.js';
@@ -9,6 +9,26 @@ export async function register(req, res, next) {
   try {
     const result = await authService.registerUser(req.body);
     return res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function verifyOtp(req, res, next) {
+  try {
+    const { email, otp } = req.body;
+    const result = await authService.verifyUserOtp(email, otp);
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function resendOtp(req, res, next) {
+  try {
+    const { email } = req.body;
+    const result = await authService.resendUserOtp(email);
+    return res.status(200).json(result);
   } catch (err) {
     next(err);
   }

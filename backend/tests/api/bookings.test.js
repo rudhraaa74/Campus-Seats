@@ -59,6 +59,11 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
         affiliation: 'Visitor',
       });
     guestToken = guestRes.body.token;
+
+    // Mark test users as verified so DB trigger permits booking
+    await pool.query(
+      `UPDATE users SET verified_at = CURRENT_TIMESTAMP WHERE email LIKE 'booking.%';`
+    );
   });
 
 

@@ -9,6 +9,7 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import { Navbar } from './components/Navbar.jsx';
 import { Login } from './pages/Login.jsx';
 import { Register } from './pages/Register.jsx';
+import { VerifyEmail } from './pages/VerifyEmail.jsx';
 import { Events } from './pages/Events.jsx';
 import { ShowDetail } from './pages/ShowDetail.jsx';
 import { Checkout } from './pages/Checkout.jsx';
@@ -35,6 +36,8 @@ export default function App() {
               {/* Authentication routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/verify-otp" element={<VerifyEmail />} />
 
               {/* Protected attendee routes */}
               <Route

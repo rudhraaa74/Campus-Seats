@@ -45,10 +45,41 @@ export function AuthProvider({ children }) {
 
   const register = async (formData) => {
     const data = await api.post('/auth/register', formData);
-    localStorage.setItem('token', data.token);
-    setToken(data.token);
-    setUser(data.user);
-    return data.user;
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      setToken(data.token);
+    }
+    if (data.user) {
+      setUser(data.user);
+    }
+    return data;
+  };
+
+  const verifyOtp = async (email, otp) => {
+    const data = await api.post('/auth/verify-otp', { email, otp });
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      setToken(data.token);
+    }
+    if (data.user) {
+      setUser(data.user);
+    }
+    return data;
+  };
+
+  const resendOtp = async (email) => {
+    return await api.post('/auth/resend-otp', { email });
+  };
+
+  const refreshUser = async () => {
+    if (!token) return null;
+    try {
+      const data = await api.get('/auth/me');
+      setUser(data.user);
+      return data.user;
+    } catch (err) {
+      return null;
+    }
   };
 
   const logout = () => {
@@ -58,7 +89,19 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        login,
+        register,
+        verifyOtp,
+        resendOtp,
+        refreshUser,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

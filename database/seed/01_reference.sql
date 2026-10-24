@@ -17,13 +17,13 @@ ALTER SEQUENCE club_club_id_seq RESTART WITH 3;
 
 -- 2. USERS & SUBCLASSES (Password for demo accounts: "Password123!")
 -- Using standard bcrypt hash for Password123!
-INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type)
+INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type, verified_at)
 VALUES
-    (1, 'manager@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Pranay', 'Pratyush', '9876543210', 'STUDENT'),
-    (2, 'student1@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Rudhra', 'Koul', '9876543211', 'STUDENT'),
-    (3, 'student2@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Areesha', 'Shahid', '9876543212', 'STUDENT'),
-    (4, 'faculty@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Ramesh', 'Sharma', '9876543213', 'FACULTY'),
-    (5, 'guest@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'John', 'Doe', '9876543214', 'GUEST')
+    (1, 'manager@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Pranay', 'Pratyush', '9876543210', 'STUDENT', CURRENT_TIMESTAMP),
+    (2, 'student1@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Rudhra', 'Koul', '9876543211', 'STUDENT', CURRENT_TIMESTAMP),
+    (3, 'student2@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Areesha', 'Shahid', '9876543212', 'STUDENT', CURRENT_TIMESTAMP),
+    (4, 'faculty@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'Ramesh', 'Sharma', '9876543213', 'FACULTY', CURRENT_TIMESTAMP),
+    (5, 'guest@seatsync.ac.in', '$2a$10$eEEl6WdPPj7XsQ90Pz3P3OWqbdlADHkzMNCaxK.6DcCtnuYA.RCEa', 'John', 'Doe', '9876543214', 'GUEST', CURRENT_TIMESTAMP)
 ON CONFLICT (user_id) DO NOTHING;
 
 ALTER SEQUENCE users_user_id_seq RESTART WITH 6;

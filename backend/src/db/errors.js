@@ -92,6 +92,9 @@ export function mapDatabaseError(err) {
     } else if (err.message.toLowerCase().includes('window') || err.message.toLowerCase().includes('cancelled') || err.message.toLowerCase().includes('past')) {
       errorCode = 'SHOW_NOT_BOOKABLE';
       status = 422;
+    } else if (err.message.toLowerCase().includes('verify') || err.message.toLowerCase().includes('unverified')) {
+      errorCode = 'UNVERIFIED_USER';
+      status = 403;
     }
 
     return {

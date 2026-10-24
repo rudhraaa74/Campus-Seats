@@ -247,6 +247,32 @@ FOR EACH ROW
 EXECUTE FUNCTION fn_check_booking_window();
 
 -- =============================================================
+-- 4.1. BR16: EMAIL VERIFICATION FOR BOOKINGS
+-- =============================================================
+-- Only verified users (verified_at IS NOT NULL) are permitted to create bookings.
+CREATE OR REPLACE FUNCTION fn_check_booking_user_verified()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_verified_at TIMESTAMPTZ;
+BEGIN
+    SELECT verified_at INTO v_verified_at FROM users WHERE user_id = NEW.user_id;
+    IF v_verified_at IS NULL THEN
+        RAISE EXCEPTION 'User must verify their email before booking tickets.'
+            USING ERRCODE = 'P0001';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_booking_user_verified ON booking;
+CREATE TRIGGER trg_booking_user_verified
+BEFORE INSERT ON booking
+FOR EACH ROW
+EXECUTE FUNCTION fn_check_booking_user_verified();
+
+-- =============================================================
 -- 5. BR9: USER TYPE VS SUBCLASS CONSISTENCY & LOCKING
 -- =============================================================
 

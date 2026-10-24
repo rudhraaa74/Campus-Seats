@@ -27,6 +27,7 @@ CREATE TABLE users (
     phone VARCHAR(20),
     user_type VARCHAR(20) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    verified_at TIMESTAMPTZ,
 
     CONSTRAINT pk_users PRIMARY KEY (user_id),
     CONSTRAINT uq_users_email UNIQUE (email),

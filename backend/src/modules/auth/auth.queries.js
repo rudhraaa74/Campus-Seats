@@ -7,7 +7,19 @@ export const authQueries = {
   insertUser: `
     INSERT INTO users (email, password_hash, first_name, last_name, phone, user_type)
     VALUES ($1, $2, $3, $4, $5, $6)
-    RETURNING user_id, email, first_name, last_name, phone, user_type, created_at;
+    RETURNING user_id, email, first_name, last_name, phone, user_type, created_at, verified_at;
+  `,
+
+  markUserVerified: `
+    UPDATE users
+    SET verified_at = CURRENT_TIMESTAMP
+    WHERE email = $1
+    RETURNING user_id, email, first_name, last_name, phone, user_type, created_at, verified_at;
+  `,
+
+  deleteUnverifiedUser: `
+    DELETE FROM users
+    WHERE email = $1 AND verified_at IS NULL;
   `,
 
   insertStudent: `
@@ -26,7 +38,7 @@ export const authQueries = {
   `,
 
   findUserByEmail: `
-    SELECT user_id, email, password_hash, first_name, last_name, phone, user_type, created_at
+    SELECT user_id, email, password_hash, first_name, last_name, phone, user_type, created_at, verified_at
     FROM users
     WHERE email = $1;
   `,
@@ -40,6 +52,7 @@ export const authQueries = {
       u.phone,
       u.user_type,
       u.created_at,
+      u.verified_at,
       s.roll_no,
       s.year_of_study,
       f.employee_id,

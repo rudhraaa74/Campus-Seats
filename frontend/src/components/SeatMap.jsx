@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api/client.js';
 import {
@@ -180,6 +180,8 @@ export function SeatMap({
         if (onRefresh) onRefresh();
       } else if (err.code === 'TICKET_LIMIT') {
         setSelectionError(err.message || 'Maximum 6 tickets allowed per booking.');
+      } else if (err.code === 'UNVERIFIED_USER') {
+        setSelectionError('UNVERIFIED_USER');
       } else {
         setSelectionError(err.message || 'Failed to hold seats. Please try again.');
       }
@@ -328,6 +330,45 @@ export function SeatMap({
               <div className="text-2xl font-extrabold text-slate-900">₹{classroomTotal}</div>
             </div>
           </div>
+
+          {selectionError && (
+            selectionError === 'UNVERIFIED_USER' ? (
+              <div className="mb-4 p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-bold">Email Verification Required: </span>
+                  <span>You must verify your email with the 6-digit OTP before booking passes.</span>
+                  <div className="mt-2">
+                    <Link
+                      to="/verify-email"
+                      className="inline-flex items-center gap-1 font-bold text-amber-800 underline hover:text-amber-950"
+                    >
+                      Verify Email Now &rarr;
+                    </Link>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectionError('')}
+                  className="text-amber-400 hover:text-amber-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 font-medium">{selectionError}</div>
+                <button
+                  type="button"
+                  onClick={() => setSelectionError('')}
+                  className="text-red-400 hover:text-red-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )
+          )}
 
           <button
             type="button"
@@ -823,17 +864,42 @@ export function SeatMap({
 
           {/* Inline Selection Error Banner right above Hold Button */}
           {selectionError && (
-            <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 font-medium">{selectionError}</div>
-              <button
-                type="button"
-                onClick={() => setSelectionError('')}
-                className="text-red-400 hover:text-red-600"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            selectionError === 'UNVERIFIED_USER' ? (
+              <div className="mb-4 p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-bold">Email Verification Required: </span>
+                  <span>You must verify your email with the 6-digit OTP before booking tickets.</span>
+                  <div className="mt-2">
+                    <Link
+                      to="/verify-email"
+                      className="inline-flex items-center gap-1 font-bold text-amber-800 underline hover:text-amber-950"
+                    >
+                      Verify Email Now &rarr;
+                    </Link>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectionError('')}
+                  className="text-amber-400 hover:text-amber-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 font-medium">{selectionError}</div>
+                <button
+                  type="button"
+                  onClick={() => setSelectionError('')}
+                  className="text-red-400 hover:text-red-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )
           )}
 
           {/* Hold Button */}

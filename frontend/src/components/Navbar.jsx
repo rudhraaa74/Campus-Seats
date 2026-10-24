@@ -6,7 +6,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Ticket, User, LogOut, Calendar, PlusCircle, BarChart3, TrendingUp } from 'lucide-react';
+import { Ticket, User, LogOut, Calendar, PlusCircle, BarChart3, TrendingUp, ShieldAlert } from 'lucide-react';
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -98,6 +98,16 @@ export function Navbar() {
                     </span>
                   )}
                 </div>
+                {user && !user.is_verified && (
+                  <Link
+                    to="/verify-email"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition shadow-2xs"
+                    title="Email unverified: click to verify with your 6-digit OTP"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                    <span>Verify Email</span>
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   title="Sign out"

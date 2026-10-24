@@ -39,14 +39,23 @@ export function Register() {
     setLoading(true);
 
     try {
-      await register(formData);
-      navigate('/events', { replace: true });
+      const res = await register(formData);
+      navigate('/verify-email', {
+        state: {
+          email: formData.email.trim(),
+          demo_otp: res?.demo_otp,
+          user_type: formData.user_type,
+        },
+        replace: true,
+      });
     } catch (err) {
       setError(err.message || 'Registration failed. Please check your details.');
     } finally {
       setLoading(false);
     }
   };
+
+  const isInstitutional = formData.user_type === 'STUDENT' || formData.user_type === 'FACULTY';
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -125,16 +134,23 @@ export function Register() {
           {/* Email & Phone */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Campus Email *</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                {isInstitutional ? 'Campus Email *' : 'Email Address *'}
+              </label>
               <input
                 type="email"
                 required
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="you@campus.ac.in"
+                placeholder={isInstitutional ? 'you@campus.ac.in' : 'you@example.com'}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
+              {isInstitutional && (
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Must be <code className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">@campus.ac.in</code> or <code className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">@seatsync.ac.in</code>
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Phone Number</label>

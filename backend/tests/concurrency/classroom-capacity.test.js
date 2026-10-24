@@ -67,6 +67,11 @@ describe('Concurrency Check: Classroom Capacity Over-selling Protection', () => 
         });
       tokens.push(res.body.token);
     }
+
+    // Mark test users as verified so DB trigger permits booking
+    await pool.query(
+      `UPDATE users SET verified_at = CURRENT_TIMESTAMP WHERE email LIKE 'classroom.race.%';`
+    );
   }, 20000);
 
   afterAll(async () => {

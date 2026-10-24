@@ -141,13 +141,23 @@ export function Checkout() {
           <div>
             <h3 className="font-bold text-red-900">Checkout Error</h3>
             <p className="text-sm mt-1">{error}</p>
-            <Link
-              to="/events"
-              className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 hover:text-red-900 underline"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Return to Events Catalog
-            </Link>
+            <div className="mt-4 flex items-center gap-4">
+              {error.toLowerCase().includes('verify') && (
+                <Link
+                  to="/verify-email"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-900 underline"
+                >
+                  Verify Email Address &rarr;
+                </Link>
+              )}
+              <Link
+                to="/events"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 hover:text-red-900 underline"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Return to Events Catalog
+              </Link>
+            </div>
           </div>
         </div>
       </div>

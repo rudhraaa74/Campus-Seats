@@ -138,14 +138,15 @@ async function seed() {
 
     for (const u of namedUsers) {
       await client.query(`
-        INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type, verified_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
         ON CONFLICT (user_id) DO UPDATE SET
           email = EXCLUDED.email,
           first_name = EXCLUDED.first_name,
           last_name = EXCLUDED.last_name,
           phone = EXCLUDED.phone,
-          user_type = EXCLUDED.user_type;
+          user_type = EXCLUDED.user_type,
+          verified_at = COALESCE(users.verified_at, CURRENT_TIMESTAMP);
       `, [u.id, u.email, DEMO_PW_HASH, u.first, u.last, u.phone, u.type]);
 
       if (u.type === 'STUDENT') {
@@ -191,8 +192,8 @@ async function seed() {
       const year = (i % 4) + 1;
 
       await client.query(`
-        INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type)
-        VALUES ($1, $2, $3, $4, $5, $6, 'STUDENT')
+        INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type, verified_at)
+        VALUES ($1, $2, $3, $4, $5, $6, 'STUDENT', CURRENT_TIMESTAMP)
         ON CONFLICT (user_id) DO NOTHING;
       `, [uid, email, DEMO_PW_HASH, first, last, `981100${1000 + uid}`]);
 
@@ -214,8 +215,8 @@ async function seed() {
       const dept = facultyDepts[i % facultyDepts.length];
 
       await client.query(`
-        INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type)
-        VALUES ($1, $2, $3, $4, $5, $6, 'FACULTY')
+        INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type, verified_at)
+        VALUES ($1, $2, $3, $4, $5, $6, 'FACULTY', CURRENT_TIMESTAMP)
         ON CONFLICT (user_id) DO NOTHING;
       `, [uid, email, DEMO_PW_HASH, first, last, `982200${1000 + uid}`]);
 
@@ -236,8 +237,8 @@ async function seed() {
       const aff = guestAffiliations[i % guestAffiliations.length];
 
       await client.query(`
-        INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type)
-        VALUES ($1, $2, $3, $4, $5, $6, 'GUEST')
+        INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type, verified_at)
+        VALUES ($1, $2, $3, $4, $5, $6, 'GUEST', CURRENT_TIMESTAMP)
         ON CONFLICT (user_id) DO NOTHING;
       `, [uid, email, DEMO_PW_HASH, first, last, `983300${1000 + uid}`]);
 
