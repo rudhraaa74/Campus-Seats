@@ -106,10 +106,10 @@ export function Login() {
           </button>
         </form>
 
-        {/* Demo Accounts Quick-Fill Box */}
+        {/* Test Accounts Quick-Fill Box */}
         <div className="pt-4 border-t border-slate-200">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Quick fill with seeded demo accounts:
+            Quick Fill (Test Accounts):
           </p>
           <div className="grid grid-cols-3 gap-2">
             <button

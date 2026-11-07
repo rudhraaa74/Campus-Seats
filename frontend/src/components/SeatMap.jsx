@@ -119,7 +119,7 @@ export function SeatMap({
       setSelectionError('');
     } else {
       if (selectedSeats.length >= 6) {
-        setSelectionError('You can select a maximum of 6 tickets per booking (Rule BR6).');
+        setSelectionError('You can select a maximum of 6 tickets per booking.');
         return;
       }
       // When a student books tickets, all tickets default to Student rate
@@ -900,7 +900,7 @@ export function SeatMap({
               <span>{userRateLabel} rate applies to all tickets booked under your account.</span>
             </span>
             <span className="font-semibold text-slate-500 text-[11px] uppercase tracking-wider">
-              Rule BR6: Max 6
+              Max 6 tickets
             </span>
           </div>
 

@@ -365,7 +365,7 @@ export function TicketPrint() {
 
                     <div className="mt-2 flex items-center gap-1 text-[9px] text-slate-400">
                       <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                      <span>PostgreSQL Verified</span>
+                      <span>Verified Admission</span>
                     </div>
                   </div>
                 </div>

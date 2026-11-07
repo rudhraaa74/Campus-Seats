@@ -338,12 +338,12 @@ export function ShowDetail() {
               <h4 className="font-bold text-sm">5-Minute Seat Hold Guarantee</h4>
             </div>
             <p className="text-xs text-emerald-200 leading-relaxed">
-              When you select seats and click to hold, they are locked in PostgreSQL for 5 minutes. No other attendee can book your seats while your timer runs.
+              When you select seats and click to hold, they are reserved exclusively for you for 5 minutes. No other attendee can book your seats while your timer runs.
             </p>
             <div className="pt-2 border-t border-emerald-800/80 text-[11px] text-emerald-300 space-y-1">
-              <div>• Max 6 tickets per booking (Rule BR6)</div>
-              <div>• Student & Faculty rates apply to all tickets booked under your account</div>
-              <div>• Real-time concurrency protection via partial unique indexes</div>
+              <div>• Max 6 tickets per booking</div>
+              <div>• Student &amp; Faculty rates apply to all tickets booked under your account</div>
+              <div>• Instant live availability updates across all devices</div>
             </div>
           </div>
         </div>

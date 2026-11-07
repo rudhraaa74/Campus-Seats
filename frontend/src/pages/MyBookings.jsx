@@ -439,7 +439,7 @@ export function MyBookings() {
                     <span className="font-extrabold text-emerald-700 text-sm">₹{bookingToCancel.total_amount}</span>
                   </div>
                   <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-200">
-                    Tickets will immediately be released back into venue availability. Any paid amount will be automatically refunded (Rule BR10).
+                    Tickets will immediately be released back into venue availability. Any paid amount will be automatically refunded.
                   </p>
                 </>
               )}

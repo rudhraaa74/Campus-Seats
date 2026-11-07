@@ -133,13 +133,12 @@ export function ReportsDashboard() {
             <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
               Managing: {user?.clubs?.map((c) => c.club_name || `Club #${c.club_id}`).join(', ') || 'Music Club'}
             </span>
-            <span className="text-xs text-slate-500">• Workflow W5</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
-            Performance Analytics & Course Reports
+            Performance Analytics &amp; Revenue Reports
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Real-time PostgreSQL aggregate metrics, window functions, and multi-table analytical queries for <strong>{user?.clubs?.map((c) => c.club_name).join(', ') || 'Music Club'}</strong>.
+            Real-time aggregate metrics, revenue tracking, and multi-event performance analytics for <strong>{user?.clubs?.map((c) => c.club_name).join(', ') || 'Music Club'}</strong>.
           </p>
         </div>
 
@@ -165,7 +164,7 @@ export function ReportsDashboard() {
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-purple-600 shrink-0" />
           <span>
-            <strong>DBMS Scope:</strong> Metrics reflect events organized by <strong>{user?.clubs?.map((c) => c.club_name).join(', ') || 'Music Club'}</strong>. Bookings and ticket revenue for events of other clubs (e.g. Drama Society, Literary Society) are isolated to their respective club manager accounts per Rule BR11.
+            <strong>Scope:</strong> Metrics reflect events organized by <strong>{user?.clubs?.map((c) => c.club_name).join(', ') || 'Music Club'}</strong>. Bookings and ticket revenue for events of other clubs are isolated to their respective club managers.
           </span>
         </div>
       </div>
@@ -327,7 +326,7 @@ export function ReportsDashboard() {
         {loading ? (
           <div className="p-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-600 mx-auto"></div>
-            <p className="text-xs text-slate-500 mt-3 font-medium">Computing PostgreSQL analytical aggregations...</p>
+            <p className="text-xs text-slate-500 mt-3 font-medium">Computing analytics and attendance metrics...</p>
           </div>
         ) : (
           <div>
@@ -336,7 +335,7 @@ export function ReportsDashboard() {
               <div className="space-y-4">
                 <div className="p-4 bg-purple-50/70 rounded-xl border border-purple-100 flex items-center justify-between">
                   <div className="text-xs text-purple-900">
-                    <span className="font-bold">SQL Technique (Query 1):</span> Multi-table JOINs, GROUP BY, and dynamic capacity resolution via view <code className="bg-white px-1.5 py-0.5 rounded border border-purple-200 font-mono">v_venue_capacity</code>.
+                    <span className="font-bold">Live Occupancy:</span> Real-time ticket sales and capacity utilization across all scheduled shows.
                   </div>
                 </div>
                 <OccupancyChart data={occupancy} />
@@ -348,7 +347,7 @@ export function ReportsDashboard() {
               <div className="space-y-4">
                 <div className="p-4 bg-purple-50/70 rounded-xl border border-purple-100 flex items-center justify-between">
                   <div className="text-xs text-purple-900">
-                    <span className="font-bold">SQL Technique (Query 2):</span> Common Table Expression (<code className="bg-white px-1.5 py-0.5 rounded border border-purple-200 font-mono">WITH ticket_breakdown AS</code>) + Multi-level conditional aggregations.
+                    <span className="font-bold">Revenue Breakdown:</span> Financial breakdown across Student, Faculty, and Guest ticket sales.
                   </div>
                 </div>
                 <RevenueBreakdownChart data={revenue} />
@@ -360,7 +359,7 @@ export function ReportsDashboard() {
               <div className="space-y-4">
                 <div className="p-4 bg-purple-50/70 rounded-xl border border-purple-100 flex items-center justify-between">
                   <div className="text-xs text-purple-900">
-                    <span className="font-bold">SQL Technique (Query 3):</span> Window Function <code className="bg-white px-1.5 py-0.5 rounded border border-purple-200 font-mono">DENSE_RANK() OVER (ORDER BY total_revenue DESC)</code> for competitive leaderboards.
+                    <span className="font-bold">Event Leaderboard:</span> Shows ranked by gross ticket revenue and total attendance.
                   </div>
                 </div>
                 <TopEventsRankingTable data={topEvents} />
@@ -372,7 +371,7 @@ export function ReportsDashboard() {
               <div className="space-y-4">
                 <div className="p-4 bg-purple-50/70 rounded-xl border border-purple-100">
                   <div className="text-xs text-purple-900">
-                    <span className="font-bold">SQL Technique (Query 4):</span> Correlated Subquery with <code className="bg-white px-1.5 py-0.5 rounded border border-purple-200 font-mono">NOT EXISTS (SELECT 1 FROM ticket WHERE ...)</code> to surface unsold upcoming shows.
+                    <span className="font-bold">Shows Needing Promotion:</span> Shows with zero or low ticket sales that may require marketing.
                   </div>
                 </div>
 
@@ -420,7 +419,7 @@ export function ReportsDashboard() {
               <div className="space-y-4">
                 <div className="p-4 bg-purple-50/70 rounded-xl border border-purple-100">
                   <div className="text-xs text-purple-900">
-                    <span className="font-bold">SQL Technique (Query 5):</span> Aggregate Filtering with <code className="bg-white px-1.5 py-0.5 rounded border border-purple-200 font-mono">GROUP BY ... HAVING COUNT(b.booking_id) &gt;= N</code> to identify VIP campus attendees.
+                    <span className="font-bold">Top Attendees:</span> Attendees with frequent event bookings across your club shows.
                   </div>
                 </div>
 
@@ -467,7 +466,7 @@ export function ReportsDashboard() {
               <div className="space-y-4">
                 <div className="p-4 bg-purple-50/70 rounded-xl border border-purple-100">
                   <div className="text-xs text-purple-900">
-                    <span className="font-bold">SQL Technique (Query 6):</span> Row-level demand aggregation and fill-rate % across Main Auditorium tiers.
+                    <span className="font-bold">Auditorium Seating Demand:</span> Row-by-row seat demand and fill-rate percentages across venue tiers.
                   </div>
                 </div>
 

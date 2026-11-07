@@ -111,7 +111,7 @@ export function Events() {
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-emerald-100 text-xs font-semibold backdrop-blur-sm mb-4">
             <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-            Phase 3: Live Event Browsing & Real-Time Seat Availability
+            Live Seat Availability &amp; Instant Booking
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white">
             Campus Venue & Event Booking

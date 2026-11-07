@@ -335,13 +335,13 @@ export function OrganizerDashboard() {
               Club Manager Portal
             </span>
             <span className="text-xs text-slate-400">•</span>
-            <span className="text-xs text-slate-500 font-semibold">Rule BR11 Authorized</span>
+            <span className="text-xs text-slate-500 font-semibold">Verified Organizer Access</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
             Organizer Dashboard
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Create events, schedule shows with overlap protection (BR2), configure pricing matrices, and manage cancellations.
+            Create events, schedule shows with automated venue overlap protection, configure pricing matrices, and manage cancellations.
           </p>
         </div>
 
@@ -1064,8 +1064,8 @@ export function OrganizerDashboard() {
 
               {/* Helper checks */}
               <div className="p-3 bg-purple-50/70 rounded-xl border border-purple-200/60 text-[11px] text-purple-900 space-y-1">
-                <div>• Overlap check: PostgreSQL exclusion constraint (BR2) enforces no double booking per venue.</div>
-                <div>• Duration check: Show duration must meet or exceed event duration (BR13).</div>
+                <div>• Venue check: Prevents scheduling conflicting shows at the same venue and time slot.</div>
+                <div>• Duration check: Show duration must meet or exceed the event duration.</div>
               </div>
 
               <div className="flex items-center gap-2 pt-2">
@@ -1191,7 +1191,7 @@ export function OrganizerDashboard() {
             <div className="p-3.5 bg-red-50 rounded-2xl border border-red-200/80 text-xs text-red-800 space-y-1">
               <div className="font-bold flex items-center gap-1.5">
                 <AlertCircle className="w-4 h-4 text-red-600" />
-                Automatic Cascade (Rule BR10):
+                Automatic Refund &amp; Cancellation:
               </div>
               <p className="text-[11px] text-red-700 leading-relaxed">
                 Cancelling this show will automatically cancel all attendee bookings, release tickets, and refund successful payments.
