@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import * as bookingsService from './bookings.service.js';
+import * as paymentService from './payment.service.js';
 
 /**
  * POST /api/v1/bookings
@@ -47,6 +48,38 @@ export async function payBooking(req, res, next) {
       simulateFailure: Boolean(simulate_failure),
     });
 
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/bookings/:id/create-order
+ * Creates a payment gateway order (Razorpay or simulator)
+ */
+export async function createOrder(req, res, next) {
+  try {
+    const bookingId = parseInt(req.params.id, 10);
+    const userId = req.user.userId;
+
+    const result = await paymentService.createPaymentOrder(bookingId, userId);
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/bookings/:id/verify-payment
+ * Verifies Razorpay HMAC signature and settles payment
+ */
+export async function verifyPayment(req, res, next) {
+  try {
+    const bookingId = parseInt(req.params.id, 10);
+    const userId = req.user.userId;
+
+    const result = await paymentService.verifyAndConfirmPayment(bookingId, userId, req.body);
     return res.status(200).json(result);
   } catch (err) {
     next(err);

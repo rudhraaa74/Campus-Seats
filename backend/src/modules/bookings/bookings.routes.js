@@ -21,8 +21,14 @@ router.get('/mine', bookingsController.getMyBookings);
 // GET /api/v1/bookings/:id (booking details)
 router.get('/:id', bookingsController.getBookingById);
 
-// POST /api/v1/bookings/:id/pay (confirm & pay)
+// POST /api/v1/bookings/:id/pay (confirm & pay - legacy & direct simulation)
 router.post('/:id/pay', bookingsController.payBooking);
+
+// POST /api/v1/bookings/:id/create-order (create Razorpay/simulator order)
+router.post('/:id/create-order', bookingsController.createOrder);
+
+// POST /api/v1/bookings/:id/verify-payment (verify signature & confirm booking)
+router.post('/:id/verify-payment', bookingsController.verifyPayment);
 
 // POST /api/v1/bookings/:id/email-tickets (email confirmation & PDF tickets)
 router.post('/:id/email-tickets', bookingsController.emailTickets);

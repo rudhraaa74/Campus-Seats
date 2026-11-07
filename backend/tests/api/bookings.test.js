@@ -360,6 +360,87 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
     });
   });
 
+  // 7. Payment Gateway Order & Verification Flow
+  describe('Gateway Order Creation & Verification (/create-order & /verify-payment)', () => {
+    let testBookingId = null;
+
+    beforeAll(async () => {
+      // Hold a fresh seat for order testing
+      const holdRes = await request(app)
+        .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({
+          show_id: 1,
+          tickets: [{ row_label: 'B', seat_no: 10, attendee_type: 'STUDENT' }],
+        });
+      testBookingId = holdRes.body.booking.booking_id;
+    });
+
+    it('creates a gateway order for a pending booking', async () => {
+      const res = await request(app)
+        .post(`/api/v1/bookings/${testBookingId}/create-order`)
+        .set('Authorization', `Bearer ${studentToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('order_id');
+      expect(res.body).toHaveProperty('amount');
+      expect(res.body.currency).toBe('INR');
+      expect(res.body.amount).toBeGreaterThan(0);
+    });
+
+    it('rejects order creation from an unauthorized user', async () => {
+      const res = await request(app)
+        .post(`/api/v1/bookings/${testBookingId}/create-order`)
+        .set('Authorization', `Bearer ${guestToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('simulates payment failure if requested', async () => {
+      const res = await request(app)
+        .post(`/api/v1/bookings/${testBookingId}/verify-payment`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({
+          simulate_failure: true,
+        });
+
+      expect(res.status).toBe(422);
+      expect(res.body.error.code).toBe('PAYMENT_FAILED');
+    });
+
+    it('successfully confirms booking and activates tickets on payment verification', async () => {
+      const res = await request(app)
+        .post(`/api/v1/bookings/${testBookingId}/verify-payment`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({
+          razorpay_order_id: `order_sim_${testBookingId}`,
+          razorpay_payment_id: `pay_sim_${Date.now()}`,
+          razorpay_signature: 'simulated_sig',
+          payment_method: 'UPI',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.booking.status).toBe('CONFIRMED');
+      expect(res.body.booking.payment).toBeDefined();
+      expect(res.body.booking.payment.status).toBe('SUCCESS');
+    });
+
+    it('idempotently returns existing confirmation when re-verifying an already confirmed booking', async () => {
+      const res = await request(app)
+        .post(`/api/v1/bookings/${testBookingId}/verify-payment`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({
+          razorpay_order_id: `order_sim_${testBookingId}`,
+          razorpay_payment_id: `pay_sim_${Date.now()}`,
+          razorpay_signature: 'simulated_sig',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.booking.status).toBe('CONFIRMED');
+    });
+  });
+
   afterAll(async () => {
     await pool.query(`DELETE FROM payment WHERE booking_id IN (SELECT booking_id FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%'));`);
     await pool.query(`DELETE FROM ticket WHERE booking_id IN (SELECT booking_id FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%'));`);

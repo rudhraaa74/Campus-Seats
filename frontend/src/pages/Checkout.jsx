@@ -24,6 +24,18 @@ import {
   Printer,
 } from 'lucide-react';
 
+function loadRazorpayScript() {
+  return new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 export function Checkout() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -83,6 +95,27 @@ export function Checkout() {
     setIsExpired(true);
   };
 
+  const handlePaymentSuccess = (res) => {
+    const updatedBooking = {
+      ...(booking || {}),
+      ...res.booking,
+    };
+    if (!res.booking?.tickets && booking?.tickets) {
+      updatedBooking.tickets = booking.tickets;
+    }
+
+    setBooking(updatedBooking);
+    setConfirmedPayment(
+      res.booking.payment || {
+        payment_id: res.booking.payment_id,
+        amount: res.booking.paid_amount || res.booking.total_amount,
+        payment_method: res.booking.payment_method || paymentMethod,
+        gateway_ref: res.booking.gateway_ref,
+        paid_at: res.booking.paid_at || new Date().toISOString(),
+      }
+    );
+  };
+
   const handlePay = async (e) => {
     e.preventDefault();
     if (isExpired || paying) return;
@@ -90,30 +123,83 @@ export function Checkout() {
     try {
       setPaying(true);
       setError('');
-      const res = await api.post(`/bookings/${id}/pay`, {
+
+      // 1. Create order on backend (Razorpay order or simulated order)
+      const orderData = await api.post(`/bookings/${id}/create-order`);
+
+      if (orderData.alreadyConfirmed) {
+        setConfirmedPayment({
+          payment_id: booking.payment_id || 1,
+          amount: booking.total_amount,
+          payment_method: 'UPI',
+          gateway_ref: booking.gateway_ref || 'CONFIRMED',
+          paid_at: new Date().toISOString(),
+        });
+        setPaying(false);
+        return;
+      }
+
+      // 2. If Razorpay is enabled and failure simulation is not requested, launch Razorpay Checkout Modal
+      if (!orderData.simulated && orderData.key_id && !simulateFailure) {
+        const scriptLoaded = await loadRazorpayScript();
+        if (scriptLoaded && window.Razorpay) {
+          const options = {
+            key: orderData.key_id,
+            amount: orderData.amount,
+            currency: orderData.currency || 'INR',
+            name: 'SeatSync',
+            description: `Pass for ${booking.event_title || 'Campus Event'}`,
+            order_id: orderData.order_id,
+            prefill: {
+              name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || orderData.booking?.first_name || '',
+              email: user?.email || orderData.booking?.email || '',
+              contact: user?.phone || orderData.booking?.phone || '',
+            },
+            theme: {
+              color: '#059669', // Emerald 600
+            },
+            modal: {
+              ondismiss: () => {
+                setPaying(false);
+              },
+            },
+            handler: async (response) => {
+              try {
+                const verifyRes = await api.post(`/bookings/${id}/verify-payment`, {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  payment_method: paymentMethod,
+                });
+                handlePaymentSuccess(verifyRes);
+              } catch (err) {
+                setError(err.message || 'Signature verification failed.');
+              } finally {
+                setPaying(false);
+              }
+            },
+          };
+
+          const rzp = new window.Razorpay(options);
+          rzp.on('payment.failed', function (resp) {
+            setError(resp.error?.description || 'Payment was declined by the bank.');
+            setPaying(false);
+          });
+          rzp.open();
+          return;
+        }
+      }
+
+      // 3. Fallback: Simulated / Direct Verification Flow (when keys unset or simulateFailure checked)
+      const res = await api.post(`/bookings/${id}/verify-payment`, {
+        razorpay_order_id: orderData.order_id,
+        razorpay_payment_id: `PAY_SIM_${Date.now()}_${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+        razorpay_signature: 'simulated_sig',
         payment_method: paymentMethod,
         simulate_failure: simulateFailure,
       });
 
-      // Preserve previously loaded show & venue metadata and tickets
-      const updatedBooking = {
-        ...(booking || {}),
-        ...res.booking,
-      };
-      if (!res.booking?.tickets && booking?.tickets) {
-        updatedBooking.tickets = booking.tickets;
-      }
-
-      setBooking(updatedBooking);
-      setConfirmedPayment(
-        res.booking.payment || {
-          payment_id: res.booking.payment_id,
-          amount: res.booking.paid_amount || res.booking.total_amount,
-          payment_method: res.booking.payment_method || paymentMethod,
-          gateway_ref: res.booking.gateway_ref,
-          paid_at: res.booking.paid_at || new Date().toISOString(),
-        }
-      );
+      handlePaymentSuccess(res);
     } catch (err) {
       if (err.code === 'HOLD_EXPIRED') {
         setIsExpired(true);

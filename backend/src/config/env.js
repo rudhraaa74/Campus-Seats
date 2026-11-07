@@ -72,6 +72,12 @@ export const env = {
         ? `SeatSync <${process.env.SMTP_USER}>`
         : 'SeatSync <no-reply@hyderabad.bits-pilani.ac.in>'),
   },
+
+  razorpay: {
+    keyId: process.env.RAZORPAY_KEY_ID || '',
+    keySecret: process.env.RAZORPAY_KEY_SECRET || '',
+    enabled: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
+  },
 };
 
 // Validate critical production configurations
