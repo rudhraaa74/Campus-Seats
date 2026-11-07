@@ -7,6 +7,7 @@ import { withTransaction } from '../../db/transaction.js';
 import * as queries from './bookings.queries.js';
 import { setHold, clearHold } from '../../redis/holds.js';
 import { notifyShowUpdated } from '../../events/seatEvents.js';
+import { sendBookingConfirmationEmail } from '../../utils/mailer.js';
 
 /**
  * Creates a 5-minute seat hold (PENDING booking + HELD tickets) in a transaction,
@@ -264,6 +265,15 @@ export async function payBooking({ bookingId, userId, paymentMethod = 'UPI', sim
   // Retrieve complete detailed booking (event, show, venue, tickets)
   const detailed = await getBookingDetail(bookingId, userId);
 
+  // Automatically send booking confirmation email with PDF tickets & invoice
+  sendBookingConfirmationEmail(
+    detailed.booking.email,
+    detailed.booking,
+    detailed.booking.tickets
+  ).catch((err) => {
+    console.warn('[Mailer Warning] Async booking confirmation email failed:', err.message);
+  });
+
   return {
     booking: {
       ...detailed.booking,
@@ -384,6 +394,37 @@ export async function cancelBooking(bookingId, userId, userClubIds = []) {
       tickets,
     },
     message: 'Booking cancelled successfully. Payments (if any) have been refunded.',
+  };
+}
+
+/**
+ * On-demand endpoint to email booking confirmation & PDF tickets to attendee
+ */
+export async function emailBookingTickets(bookingId, userId) {
+  const detailed = await getBookingDetail(bookingId, userId);
+  if (detailed.booking.status !== 'CONFIRMED') {
+    const error = new Error('Only CONFIRMED bookings can be emailed.');
+    error.status = 400;
+    error.code = 'INVALID_STATE';
+    throw error;
+  }
+
+  const result = await sendBookingConfirmationEmail(
+    detailed.booking.email,
+    detailed.booking,
+    detailed.booking.tickets
+  );
+
+  if (!result.success) {
+    const error = new Error(result.error || 'Failed to send tickets email.');
+    error.status = 500;
+    error.code = 'EMAIL_SEND_FAILED';
+    throw error;
+  }
+
+  return {
+    success: true,
+    message: `E-Tickets and receipt PDF sent to ${detailed.booking.email}.`,
   };
 }
 

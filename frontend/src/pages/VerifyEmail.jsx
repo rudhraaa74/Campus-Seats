@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Mail, ShieldCheck, KeyRound, RotateCw, ArrowRight, AlertCircle, CheckCircle2, Clock, Sparkles } from 'lucide-react';
+import { Mail, RotateCw, ArrowRight, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 
 export function VerifyEmail() {
   const location = useLocation();
@@ -14,16 +14,14 @@ export function VerifyEmail() {
   const { user, verifyOtp, resendOtp } = useAuth();
 
   const initialEmail = location.state?.email || user?.email || '';
-  const initialDemoOtp = location.state?.demo_otp || '';
 
   const [email, setEmail] = useState(initialEmail);
-  const [otp, setOtp] = useState(initialDemoOtp);
+  const [otp, setOtp] = useState('');
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [demoCode, setDemoCode] = useState(initialDemoOtp);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -69,9 +67,6 @@ export function VerifyEmail() {
       const res = await resendOtp(email);
       setSuccessMsg(res.message || 'A new code has been sent to your email.');
       setCooldown(60); // 60s cooldown
-      if (res.demo_otp) {
-        setDemoCode(res.demo_otp);
-      }
     } catch (err) {
       setError(err.message || 'Failed to resend code.');
       if (err.waitSeconds) {
@@ -79,13 +74,6 @@ export function VerifyEmail() {
       }
     } finally {
       setResending(false);
-    }
-  };
-
-  const handleAutoFillDemo = () => {
-    if (demoCode) {
-      setOtp(demoCode);
-      setError(null);
     }
   };
 
@@ -106,25 +94,6 @@ export function VerifyEmail() {
             {email || 'your email address'}
           </div>
         </div>
-
-        {/* Demo Helper Banner if demo code available */}
-        {demoCode && (
-          <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <span>
-                <strong>Demo Mode:</strong> Code is <span className="font-mono font-bold tracking-widest text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">{demoCode}</span>
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleAutoFillDemo}
-              className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline ml-2"
-            >
-              Fill code
-            </button>
-          </div>
-        )}
 
         {/* Status Messages */}
         {error && (

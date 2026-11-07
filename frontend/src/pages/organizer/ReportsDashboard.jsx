@@ -271,6 +271,19 @@ export function ReportsDashboard() {
           />
         </div>
 
+        {(dateFrom || dateTo) && (
+          <button
+            type="button"
+            onClick={() => {
+              setDateFrom('');
+              setDateTo('');
+            }}
+            className="text-xs text-slate-500 hover:text-slate-800 underline"
+          >
+            Clear dates
+          </button>
+        )}
+
         {(selectedEventId || dateFrom || dateTo) && (
           <button
             onClick={() => {

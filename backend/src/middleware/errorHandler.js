@@ -12,6 +12,7 @@ export function errorHandler(err, req, res, next) {
       error: {
         code: err.code || 'BAD_REQUEST',
         message: err.message,
+        ...(err.unverified !== undefined ? { unverified: err.unverified } : {}),
       },
     });
   }

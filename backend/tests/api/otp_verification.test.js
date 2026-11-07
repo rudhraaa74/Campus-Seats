@@ -11,8 +11,8 @@ import { redis } from '../../src/redis/client.js';
 
 describe('Email Domain Rule & OTP Verification Tests', () => {
   const timestamp = Date.now();
-  const validStudentEmail = `otp.student.${timestamp}@campus.ac.in`;
-  const validFacultyEmail = `otp.faculty.${timestamp}@campus.ac.in`;
+  const validStudentEmail = `otp.student.${timestamp}@hyderabad.bits-pilani.ac.in`;
+  const validFacultyEmail = `otp.faculty.${timestamp}@hyderabad.bits-pilani.ac.in`;
   const nonCampusEmail = `external.user.${timestamp}@gmail.com`;
   const testPassword = 'Password123!';
 
@@ -21,8 +21,8 @@ describe('Email Domain Rule & OTP Verification Tests', () => {
     redis.disconnect();
   });
 
-  // 1. Institutional Domain Enforcement
-  describe('Domain Rule for Role Claims', () => {
+  // 1. Institutional Domain & Phone Number Enforcement
+  describe('Domain & Phone Number Rules for Registration', () => {
     it('rejects student registration with an external non-campus email domain', async () => {
       const res = await request(app)
         .post('/api/v1/auth/register')
@@ -56,13 +56,49 @@ describe('Email Domain Rule & OTP Verification Tests', () => {
       expect(res.body.error.code).toBe('CAMPUS_DOMAIN_REQUIRED');
     });
 
-    it('allows guest registration with any valid email domain', async () => {
+    it('rejects phone number starting with 0', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/register')
+        .send({
+          email: `phone.zero.${timestamp}@hyderabad.bits-pilani.ac.in`,
+          password: testPassword,
+          first_name: 'ZeroPhone',
+          phone: '0987654321',
+          user_type: 'STUDENT',
+          roll_number: `ROLL_Z_${timestamp}`,
+          year_of_study: 1,
+        });
+
+      expect(res.status).toBe(422);
+      expect(res.body.error.code).toBe('INVALID_PHONE');
+      expect(res.body.error.message).toContain('cannot start with 0');
+    });
+
+    it('rejects phone number with country code (more than 10 digits)', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/register')
+        .send({
+          email: `phone.cc.${timestamp}@hyderabad.bits-pilani.ac.in`,
+          password: testPassword,
+          first_name: 'CCPhone',
+          phone: '919876543210',
+          user_type: 'STUDENT',
+          roll_number: `ROLL_CC_${timestamp}`,
+          year_of_study: 1,
+        });
+
+      expect(res.status).toBe(422);
+      expect(res.body.error.code).toBe('INVALID_PHONE');
+    });
+
+    it('allows guest registration with any valid email domain and valid 10-digit phone', async () => {
       const res = await request(app)
         .post('/api/v1/auth/register')
         .send({
           email: `guest.${timestamp}@gmail.com`,
           password: testPassword,
           first_name: 'ValidGuest',
+          phone: '9876543210',
           user_type: 'GUEST',
           affiliation: 'External Visitor',
         });

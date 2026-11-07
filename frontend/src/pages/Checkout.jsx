@@ -259,6 +259,22 @@ export function Checkout() {
               </div>
             </div>
 
+            {/* Email Confirmation Notice */}
+            <div className="p-3.5 bg-emerald-50/70 border border-emerald-200/80 rounded-xl flex items-center justify-between gap-3 text-xs text-emerald-800">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  Booking confirmation &amp; official PDF tickets have been emailed to your registered address.
+                </span>
+              </div>
+              <Link
+                to={`/bookings/${booking.booking_id}/ticket`}
+                className="font-bold underline text-emerald-900 hover:text-emerald-950 shrink-0"
+              >
+                View / Email PDF &rarr;
+              </Link>
+            </div>
+
             {/* Actions */}
             <div className="pt-6 border-t border-slate-100 flex flex-wrap items-center justify-end gap-3">
               <Link

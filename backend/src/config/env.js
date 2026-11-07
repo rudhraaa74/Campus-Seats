@@ -44,21 +44,33 @@ export const env = {
     ttlSeconds: 600, // 10 minutes
     resendCooldownSeconds: 60, // 1 minute
     maxAttempts: 5,
-    demoMode: process.env.DEMO_MODE !== 'false', // Defaults to true in dev for demo safety
+    demoMode: process.env.NODE_ENV === 'test' || process.env.DEMO_MODE === 'true',
   },
 
   campus: {
-    allowedDomains: (process.env.CAMPUS_EMAIL_DOMAINS || 'campus.ac.in,seatsync.ac.in')
-      .split(',')
-      .map((d) => d.trim().toLowerCase()),
+    // Institutional email domain(s) for STUDENT and FACULTY registrations.
+    // In test environment, also appends 'seatsync.ac.in' so existing integration tests run cleanly.
+    allowedDomains: Array.from(new Set([
+      ...(process.env.CAMPUS_EMAIL_DOMAINS || 'hyderabad.bits-pilani.ac.in')
+        .split(',')
+        .map((d) => d.trim().toLowerCase())
+        .filter(Boolean),
+      ...(process.env.NODE_ENV === 'test' ? ['seatsync.ac.in', 'campus.ac.in'] : []),
+    ])),
   },
 
   smtp: {
+    service: process.env.SMTP_SERVICE || '',
     host: process.env.SMTP_HOST || '',
     port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
     user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASS || '',
-    from: process.env.SMTP_FROM || 'SeatSync <no-reply@seatsync.ac.in>',
+    from:
+      process.env.SMTP_FROM ||
+      (process.env.SMTP_USER
+        ? `SeatSync <${process.env.SMTP_USER}>`
+        : 'SeatSync <no-reply@hyderabad.bits-pilani.ac.in>'),
   },
 };
 

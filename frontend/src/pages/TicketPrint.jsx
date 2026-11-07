@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Loader2,
   Sparkles,
+  Mail,
 } from 'lucide-react';
 
 export function TicketPrint() {
@@ -28,6 +29,8 @@ export function TicketPrint() {
   const [qrCodes, setQrCodes] = useState({}); // ticket_id -> dataURL
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [emailing, setEmailing] = useState(false);
+  const [emailStatus, setEmailStatus] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -86,6 +89,26 @@ export function TicketPrint() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleEmailTickets = async () => {
+    try {
+      setEmailing(true);
+      setEmailStatus(null);
+      const res = await api.post(`/bookings/${id}/email-tickets`);
+      setEmailStatus({
+        type: 'success',
+        message: res.message || 'Tickets and tax invoice PDF have been emailed to your address!',
+      });
+      setTimeout(() => setEmailStatus(null), 6000);
+    } catch (err) {
+      setEmailStatus({
+        type: 'error',
+        message: err.message || 'Failed to email tickets.',
+      });
+    } finally {
+      setEmailing(false);
+    }
   };
 
   if (loading) {
@@ -151,6 +174,22 @@ export function TicketPrint() {
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
             Official Campus Pass
           </span>
+
+          <button
+            type="button"
+            disabled={emailing || !isConfirmed}
+            onClick={handleEmailTickets}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50"
+            title="Send tickets & PDF invoice to your registered email"
+          >
+            {emailing ? (
+              <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />
+            ) : (
+              <Mail className="w-4 h-4 text-emerald-600" />
+            )}
+            {emailing ? 'Sending...' : 'Email Tickets (PDF)'}
+          </button>
+
           <button
             type="button"
             onClick={handlePrint}
@@ -161,6 +200,24 @@ export function TicketPrint() {
           </button>
         </div>
       </div>
+
+      {/* Email Status Feedback */}
+      {emailStatus && (
+        <div
+          className={`no-print mb-6 p-4 rounded-2xl flex items-center gap-3 text-xs font-medium border ${
+            emailStatus.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
+          }`}
+        >
+          {emailStatus.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+          )}
+          <span>{emailStatus.message}</span>
+        </div>
+      )}
 
       {/* Non-confirmed Warning */}
       {!isConfirmed && (

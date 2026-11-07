@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // frontend/src/pages/Register.jsx
-// User Registration screen dynamically adjusting subclass fields
+// User Registration screen dynamically adjusting role details
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
@@ -30,26 +30,70 @@ export function Register() {
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'phone') {
+      let clean = value.replace(/\D/g, '');
+      // Strip leading 0
+      if (clean.startsWith('0')) {
+        clean = clean.replace(/^0+/, '');
+      }
+      // Strip +91/91 country code prefix if user pastes 11 or 12 digits
+      if (clean.startsWith('91') && clean.length > 10) {
+        clean = clean.slice(2);
+      }
+      clean = clean.slice(0, 10);
+      setFormData({ ...formData, phone: clean });
+      return;
+    }
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+
+    const emailTrimmed = formData.email.trim().toLowerCase();
+    const isInst = formData.user_type === 'STUDENT' || formData.user_type === 'FACULTY';
+
+    // 1. Institutional domain validation
+    if (isInst && !emailTrimmed.endsWith('@hyderabad.bits-pilani.ac.in')) {
+      setError({
+        message:
+          'Students and faculty must register with an institutional email address ending with @hyderabad.bits-pilani.ac.in.',
+      });
+      return;
+    }
+
+    // 2. Strict 10-digit phone number validation
+    const phoneTrimmed = formData.phone.trim();
+    if (!phoneTrimmed || phoneTrimmed.length !== 10 || !/^[1-9]\d{9}$/.test(phoneTrimmed)) {
+      setError({
+        message:
+          'Phone number must be exactly 10 digits and cannot start with 0 or a country code (e.g. 9876543210).',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await register(formData);
+      const res = await register({
+        ...formData,
+        email: emailTrimmed,
+        phone: phoneTrimmed,
+      });
       navigate('/verify-email', {
         state: {
-          email: formData.email.trim(),
-          demo_otp: res?.demo_otp,
+          email: emailTrimmed,
           user_type: formData.user_type,
         },
         replace: true,
       });
     } catch (err) {
-      setError(err.message || 'Registration failed. Please check your details.');
+      setError({
+        message: err.message || 'Registration failed. Please check your details.',
+        unverified: Boolean(err.unverified),
+      });
     } finally {
       setLoading(false);
     }
@@ -67,7 +111,7 @@ export function Register() {
           <p className="mt-2 text-center text-sm text-slate-600">
             Already registered?{' '}
             <Link to="/login" className="font-medium text-emerald-600 hover:text-emerald-500">
-              Sign in to your account
+               Sign in to your account
             </Link>
           </p>
         </div>
@@ -75,7 +119,20 @@ export function Register() {
         {error && (
           <div className="rounded-lg bg-rose-50 p-4 border border-rose-200 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-rose-700">{error}</div>
+            <div className="flex-1">
+              <div className="text-sm text-rose-700">{error.message || error}</div>
+              {error.unverified && (
+                <div className="mt-2">
+                  <Link
+                    to="/verify-email"
+                    state={{ email: formData.email.trim() }}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-rose-800 underline hover:text-rose-950"
+                  >
+                    Enter 6-digit verification code &rarr;
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -143,25 +200,38 @@ export function Register() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder={isInstitutional ? 'you@campus.ac.in' : 'you@example.com'}
+                placeholder={
+                  isInstitutional
+                    ? formData.user_type === 'STUDENT'
+                      ? 'f20230001@hyderabad.bits-pilani.ac.in'
+                      : 'prof.name@hyderabad.bits-pilani.ac.in'
+                    : 'you@example.com'
+                }
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
               {isInstitutional && (
                 <p className="mt-1 text-[11px] text-slate-500">
-                  Must be <code className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">@campus.ac.in</code> or <code className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">@seatsync.ac.in</code>
+                  Must be <code className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">@hyderabad.bits-pilani.ac.in</code>
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Phone Number</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Phone Number (10 Digits) *
+              </label>
               <input
                 type="tel"
+                required
+                maxLength={10}
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="9876543210"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
+              <p className="mt-1 text-[11px] text-slate-500">
+                10 digits without leading 0 or +91 country code
+              </p>
             </div>
           </div>
 
@@ -179,11 +249,11 @@ export function Register() {
             />
           </div>
 
-          {/* Subclass-specific dynamic fields */}
+          {/* Role-specific details */}
           {formData.user_type === 'STUDENT' && (
             <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
-                Student Details (Subclass Attributes)
+                Student Details
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -220,7 +290,7 @@ export function Register() {
           {formData.user_type === 'FACULTY' && (
             <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 space-y-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-blue-800">
-                Faculty Details (Subclass Attributes)
+                Faculty Details
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

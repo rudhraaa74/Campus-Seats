@@ -422,13 +422,27 @@ export function MyBookings() {
                 <span>Reserved Tickets:</span>
                 <span className="font-semibold text-slate-900">{bookingToCancel.ticket_count || 1} tickets</span>
               </div>
-              <div className="flex justify-between">
-                <span>Refund Amount:</span>
-                <span className="font-extrabold text-emerald-700 text-sm">₹{bookingToCancel.total_amount}</span>
-              </div>
-              <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-200">
-                Tickets will immediately be released back into venue availability. Any paid amount will be automatically refunded (Rule BR10).
-              </p>
+              {bookingToCancel.status === 'PENDING' ? (
+                <>
+                  <div className="flex justify-between">
+                    <span>Hold Status:</span>
+                    <span className="font-semibold text-amber-700">Temporary Hold (Not Paid)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-200">
+                    Your held seats will be released immediately for other attendees. No charges were made.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between">
+                    <span>Refund Amount:</span>
+                    <span className="font-extrabold text-emerald-700 text-sm">₹{bookingToCancel.total_amount}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-200">
+                    Tickets will immediately be released back into venue availability. Any paid amount will be automatically refunded (Rule BR10).
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="flex items-center gap-3 pt-2">
@@ -438,7 +452,7 @@ export function MyBookings() {
                 onClick={() => setBookingToCancel(null)}
                 className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition-colors"
               >
-                Keep Booking
+                {bookingToCancel.status === 'PENDING' ? 'Keep Hold' : 'Keep Booking'}
               </button>
               <button
                 type="button"
@@ -451,6 +465,8 @@ export function MyBookings() {
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     Cancelling...
                   </>
+                ) : bookingToCancel.status === 'PENDING' ? (
+                  'Release Hold'
                 ) : (
                   'Confirm Cancellation'
                 )}

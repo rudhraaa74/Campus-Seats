@@ -24,6 +24,9 @@ router.get('/:id', bookingsController.getBookingById);
 // POST /api/v1/bookings/:id/pay (confirm & pay)
 router.post('/:id/pay', bookingsController.payBooking);
 
+// POST /api/v1/bookings/:id/email-tickets (email confirmation & PDF tickets)
+router.post('/:id/email-tickets', bookingsController.emailTickets);
+
 // DELETE /api/v1/bookings/:id (cancel reservation & refund)
 router.delete('/:id', bookingsController.cancelBooking);
 

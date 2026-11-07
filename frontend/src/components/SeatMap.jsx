@@ -5,8 +5,8 @@
 // dynamic price calculation, 5-minute hold creation, and live polling.
 // ─────────────────────────────────────────────────────────────
 
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api/client.js';
 import {
@@ -39,6 +39,7 @@ export function SeatMap({
   onRefresh,
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   const [tierFilter, setTierFilter] = useState('ALL'); // 'ALL' | 'GOLD' | 'SILVER'
@@ -53,6 +54,35 @@ export function SeatMap({
   const [classroomAttendeeType, setClassroomAttendeeType] = useState(
     user?.user_type ? user.user_type.toUpperCase() : 'STUDENT'
   );
+
+  // Keep classroom attendee tier in sync when user profile loads asynchronously
+  useEffect(() => {
+    if (user?.user_type) {
+      setClassroomAttendeeType(user.user_type.toUpperCase());
+    }
+  }, [user]);
+
+  // Restore saved selection from session if returning from login
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(`pending_seats_${showId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed.selectedSeats) && parsed.selectedSeats.length > 0) {
+          const role = user?.user_type ? user.user_type.toUpperCase() : 'STUDENT';
+          const updated = parsed.selectedSeats.map((s) => ({
+            ...s,
+            attendee_type: s.attendee_type || role,
+          }));
+          setSelectedSeats(updated);
+        }
+        if (parsed.classroomQty) setClassroomQty(parsed.classroomQty);
+        sessionStorage.removeItem(`pending_seats_${showId}`);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [showId, user]);
 
   // Helper to calculate price per seat based on category and attendee type
   const getSeatPrice = (categoryName, attendeeType) => {
@@ -130,7 +160,15 @@ export function SeatMap({
   // Submit hold request to backend
   const handleCreateHold = async () => {
     if (!user) {
-      navigate('/login');
+      try {
+        sessionStorage.setItem(
+          `pending_seats_${showId}`,
+          JSON.stringify({ selectedSeats, classroomQty, classroomAttendeeType })
+        );
+      } catch (e) {
+        // ignore
+      }
+      navigate('/login', { state: { from: location } });
       return;
     }
 
@@ -448,6 +486,10 @@ export function SeatMap({
   const handleResetZoom = () => {
     setZoomLevel(1);
   };
+
+  const userRateLabel = user?.user_type
+    ? user.user_type.charAt(0) + user.user_type.slice(1).toLowerCase()
+    : 'Student';
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-sm">
@@ -777,7 +819,7 @@ export function SeatMap({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Student rate applied by default. You can adjust attendee rates below.
+                {userRateLabel} rate applied by default. You can adjust attendee rates below.
               </p>
             </div>
 
@@ -855,7 +897,7 @@ export function SeatMap({
           <div className="mb-4 flex items-center justify-between text-xs text-slate-600 bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs">
             <span className="flex items-center gap-2">
               <Info className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Student rate applies to all tickets booked under your account.</span>
+              <span>{userRateLabel} rate applies to all tickets booked under your account.</span>
             </span>
             <span className="font-semibold text-slate-500 text-[11px] uppercase tracking-wider">
               Rule BR6: Max 6

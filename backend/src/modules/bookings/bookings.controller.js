@@ -99,3 +99,19 @@ export async function cancelBooking(req, res, next) {
     next(err);
   }
 }
+
+/**
+ * POST /api/v1/bookings/:id/email-tickets
+ * Sends e-tickets and tax invoice PDF to the attendee via email
+ */
+export async function emailTickets(req, res, next) {
+  try {
+    const bookingId = parseInt(req.params.id, 10);
+    const userId = req.user.userId;
+
+    const result = await bookingsService.emailBookingTickets(bookingId, userId);
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}

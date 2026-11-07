@@ -178,6 +178,10 @@ export async function getBookingById(bookingId) {
       b.hold_expires_at,
       b.status,
       b.total_amount,
+      u.first_name,
+      u.last_name,
+      u.email,
+      u.phone,
       s.start_time,
       s.end_time,
       s.venue_id,
@@ -193,6 +197,7 @@ export async function getBookingById(bookingId) {
       p.gateway_ref,
       p.paid_at
     FROM booking b
+    JOIN users u ON b.user_id = u.user_id
     JOIN show s ON b.show_id = s.show_id
     JOIN venue v ON s.venue_id = v.venue_id
     JOIN event e ON s.event_id = e.event_id

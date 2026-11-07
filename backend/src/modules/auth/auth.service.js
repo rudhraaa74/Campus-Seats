@@ -74,6 +74,19 @@ export async function registerUser({
     }
   }
 
+  // Validate phone number format: exactly 10 digits, cannot start with 0 or country code
+  if (phone) {
+    const cleanPhone = phone.trim();
+    if (!/^[1-9]\d{9}$/.test(cleanPhone)) {
+      const err = new Error(
+        'Phone number must be exactly 10 digits and cannot start with 0 or a country code (e.g. 9876543210).'
+      );
+      err.status = 422;
+      err.code = 'INVALID_PHONE';
+      throw err;
+    }
+  }
+
   // Validate subclass requirements before starting the database transaction
   if (normalizedType === 'STUDENT' && (!roll_number || !year_of_study)) {
     const err = new Error('Students require roll_number and year_of_study (1-5).');

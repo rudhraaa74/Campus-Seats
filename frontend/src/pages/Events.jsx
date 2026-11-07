@@ -205,7 +205,7 @@ export function Events() {
             ))}
           </div>
 
-          {(searchQuery || selectedType !== 'ALL' || selectedClub) && (
+          {(searchQuery || selectedType !== 'ALL' || selectedClub || selectedSort !== 'date_asc') && (
             <button
               onClick={handleResetFilters}
               className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 font-medium py-1 px-2 rounded-lg hover:bg-slate-100 transition-colors"

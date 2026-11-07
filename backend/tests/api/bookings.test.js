@@ -324,6 +324,42 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
     });
   });
 
+  // 6. POST /api/v1/bookings/:id/email-tickets
+  describe('POST /api/v1/bookings/:id/email-tickets', () => {
+    it('successfully generates and emails PDF tickets with QR code for confirmed booking', async () => {
+      // Find a confirmed booking for facultyToken
+      const mineRes = await request(app)
+        .get('/api/v1/bookings/mine')
+        .set('Authorization', `Bearer ${facultyToken}`);
+
+      const confirmedBooking = mineRes.body.bookings.find((b) => b.status === 'CONFIRMED');
+      expect(confirmedBooking).toBeDefined();
+
+      const res = await request(app)
+        .post(`/api/v1/bookings/${confirmedBooking.booking_id}/email-tickets`)
+        .set('Authorization', `Bearer ${facultyToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toContain('PDF sent to');
+    });
+
+    it('rejects emailing tickets for a booking belonging to another user', async () => {
+      const mineRes = await request(app)
+        .get('/api/v1/bookings/mine')
+        .set('Authorization', `Bearer ${facultyToken}`);
+
+      const confirmedBooking = mineRes.body.bookings.find((b) => b.status === 'CONFIRMED');
+      expect(confirmedBooking).toBeDefined();
+
+      const res = await request(app)
+        .post(`/api/v1/bookings/${confirmedBooking.booking_id}/email-tickets`)
+        .set('Authorization', `Bearer ${guestToken}`);
+
+      expect(res.status).toBe(403);
+    });
+  });
+
   afterAll(async () => {
     await pool.query(`DELETE FROM payment WHERE booking_id IN (SELECT booking_id FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%'));`);
     await pool.query(`DELETE FROM ticket WHERE booking_id IN (SELECT booking_id FROM booking WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'booking.%'));`);
