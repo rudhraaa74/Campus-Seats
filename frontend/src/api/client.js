@@ -41,9 +41,59 @@ async function request(endpoint, options = {}) {
   }
 }
 
+async function downloadFile(endpoint, defaultFilename = 'download.csv') {
+  const token = localStorage.getItem('token');
+  const headers = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const err = new Error(data.error?.message || `Download failed with status ${res.status}`);
+      err.code = data.error?.code || 'UNKNOWN_ERROR';
+      err.status = res.status;
+      throw err;
+    }
+
+    const disposition = res.headers.get('content-disposition') || '';
+    let filename = defaultFilename;
+    const match = disposition.match(/filename="?([^";]+)"?/i);
+    if (match && match[1]) {
+      filename = match[1].trim();
+    }
+
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+
+    return { filename };
+  } catch (err) {
+    if (!err.status && err.name === 'TypeError') {
+      err.message = 'Unable to connect to the SeatSync API server. Please check your network or server.';
+      err.code = 'NETWORK_ERROR';
+    }
+    throw err;
+  }
+}
+
 export const api = {
   get: (endpoint, options) => request(endpoint, { method: 'GET', ...options }),
   post: (endpoint, body, options) => request(endpoint, { method: 'POST', body: JSON.stringify(body), ...options }),
   put: (endpoint, body, options) => request(endpoint, { method: 'PUT', body: JSON.stringify(body), ...options }),
   delete: (endpoint, options) => request(endpoint, { method: 'DELETE', ...options }),
+  download: downloadFile,
 };

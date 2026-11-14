@@ -353,11 +353,13 @@ Owners are suggestions; change them if the team agrees. Phases 5 and 6 run in pa
   - [x] `POST /organizer/shows` (venue and time), `POST /organizer/shows/:id/cancel`
   - [x] `PUT /organizer/shows/:id/prices` (price grid per seat category and attendee type)
   - [x] `GET /organizer/venues` (venues and categories for the forms)
+  - [x] `GET /organizer/events/:eventId/attendees.csv` (RFC 4180 attendee export with formula injection defense and UTF-8 BOM; optional showId filter)
 - [x] API tests: overlapping show → `VENUE_BUSY`; show shorter than event; price for another venue's category; non-manager → 403; cancel show cancels all bookings.
 
 **Front end — Geetanjali with Rudhra**
 - [x] `MyBookings.jsx` with a cancel action and status badges.
 - [x] Organizer pages: `EventForm`, `ShowForm` (venue picker, time), `PriceGrid`, show cancel button.
+- [x] Export attendees (CSV) buttons on event view and show rows with loading states and auth-attached blob downloads.
 - [x] Show the database's rejection messages in the forms.
 
 **Checkpoint (W3 and W4 done):** create an event, schedule two shows, set prices, book as an attendee, cancel the show, and see the booking cancelled and refunded; every invalid input is rejected with a clear message.

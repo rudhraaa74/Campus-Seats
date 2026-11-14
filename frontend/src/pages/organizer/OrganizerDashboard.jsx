@@ -29,6 +29,7 @@ import {
   Users,
   GraduationCap,
   School,
+  Download,
 } from 'lucide-react';
 
 export function OrganizerDashboard() {
@@ -68,6 +69,7 @@ export function OrganizerDashboard() {
   const [cancellingShow, setCancellingShow] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState('');
+  const [exportingKey, setExportingKey] = useState(null);
 
   // Form states
   const [eventForm, setEventForm] = useState({
@@ -140,6 +142,24 @@ export function OrganizerDashboard() {
       });
     }
     setShowEventModal(true);
+  };
+
+  // Export attendees handler (CSV)
+  const handleExportAttendees = async (eventId, showId = null) => {
+    const key = showId ? `show-${showId}` : `event-${eventId}`;
+    setExportingKey(key);
+    setError('');
+    try {
+      const endpoint = showId
+        ? `/organizer/events/${eventId}/attendees.csv?showId=${showId}`
+        : `/organizer/events/${eventId}/attendees.csv`;
+      const result = await api.download(endpoint, `attendees-${key}.csv`);
+      setSuccessMessage(`Attendee list (${result.filename}) downloaded successfully.`);
+    } catch (err) {
+      setError(err.message || 'Failed to export attendee list.');
+    } finally {
+      setExportingKey(null);
+    }
   };
 
   const handleSaveEvent = async (e) => {
@@ -514,6 +534,23 @@ export function OrganizerDashboard() {
                     </div>
 
                     <div className="flex items-center gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
+                      {user?.clubIds?.includes(s.club_id) && (
+                        <button
+                          type="button"
+                          onClick={() => handleExportAttendees(s.event_id, s.show_id)}
+                          disabled={exportingKey === `show-${s.show_id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Export attendees for this show (CSV)"
+                        >
+                          {exportingKey === `show-${s.show_id}` ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-600" />
+                          ) : (
+                            <Download className="w-3.5 h-3.5 text-purple-600" />
+                          )}
+                          <span>Export attendees (CSV)</span>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => handleOpenPricingModal(s)}
@@ -569,14 +606,32 @@ export function OrganizerDashboard() {
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
                     {e.duration_min} min
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEventModal(e)}
-                    className="inline-flex items-center gap-1 text-purple-700 hover:text-purple-900 font-bold"
-                  >
-                    <Edit className="w-3 h-3" />
-                    Edit
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {user?.clubIds?.includes(e.club_id) && (
+                      <button
+                        type="button"
+                        onClick={() => handleExportAttendees(e.event_id)}
+                        disabled={exportingKey === `event-${e.event_id}`}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Export attendee list for all shows (CSV)"
+                      >
+                        {exportingKey === `event-${e.event_id}` ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-600" />
+                        ) : (
+                          <Download className="w-3.5 h-3.5 text-purple-600" />
+                        )}
+                        <span>Export attendees (CSV)</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEventModal(e)}
+                      className="inline-flex items-center gap-1 text-purple-700 hover:text-purple-900 font-bold px-2 py-1 rounded-xl hover:bg-purple-50 transition-all"
+                    >
+                      <Edit className="w-3 h-3" />
+                      Edit
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

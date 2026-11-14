@@ -318,6 +318,30 @@
           }
         },
         {
+          "name": "Export Attendees CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizer/events/1/attendees.csv?showId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizer", "events", "1", "attendees.csv"],
+              "query": [
+                {
+                  "key": "showId",
+                  "value": "1",
+                  "description": "Optional show filter"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "List Organizer Shows",
           "request": {
             "method": "GET",

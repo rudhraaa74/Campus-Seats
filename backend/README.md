@@ -62,7 +62,7 @@ See [`docs/api/API.md`](../docs/api/API.md) for the full contract.
 | Auth | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` | W1 |
 | Browse | `GET /events`, `GET /events/:id`, `GET /shows/:id`, `GET /shows/:id/seats` | W2 |
 | Booking | `POST /bookings`, `POST /bookings/:id/pay`, `DELETE /bookings/:id` | W2, W3 |
-| Organizer | `POST /organizer/events`, `POST /organizer/shows`, `PUT /organizer/shows/:id/prices`, `POST /organizer/shows/:id/cancel` | W4 |
+| Organizer | `GET /organizer/events`, `POST /organizer/events`, `PUT /organizer/events/:id`, `GET /organizer/events/:eventId/attendees.csv`, `POST /organizer/shows`, `PUT /organizer/shows/:id/prices`, `POST /organizer/shows/:id/cancel` | W4 |
 | Reports | `GET /reports/occupancy`, `GET /reports/revenue`, `GET /reports/top-events` | W5 |
 | Health | `GET /health` | — |
 

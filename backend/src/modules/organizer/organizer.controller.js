@@ -174,3 +174,27 @@ export async function updateShowPrices(req, res, next) {
     next(err);
   }
 }
+
+/**
+ * GET /api/v1/organizer/events/:eventId/attendees.csv
+ */
+export async function exportAttendeesCsv(req, res, next) {
+  try {
+    const eventId = parseInt(req.params.eventId, 10);
+    const showId = req.query.showId ? parseInt(req.query.showId, 10) : undefined;
+    const userClubIds = req.user.clubIds || [];
+
+    const { filename, csvContent } = await organizerService.exportAttendeesCsv({
+      eventId,
+      showId,
+      userClubIds,
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.status(200).send(csvContent);
+  } catch (err) {
+    next(err);
+  }
+}
+

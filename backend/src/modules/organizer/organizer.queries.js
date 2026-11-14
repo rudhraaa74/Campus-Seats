@@ -318,3 +318,74 @@ export async function getOrCreateClassroomVenue({ roomNumber, capacity }) {
   return venueRecord;
 }
 
+/**
+ * Checks if a show belongs to a specific event
+ */
+export async function getShowByIdAndEvent(showId, eventId) {
+  const query = `
+    SELECT show_id, event_id, venue_id, start_time, end_time, status
+    FROM show
+    WHERE show_id = $1 AND event_id = $2;
+  `;
+  const result = await pool.query(query, [showId, eventId]);
+  return result.rows[0] || null;
+}
+
+/**
+ * Retrieves confirmed active ticket attendee records for an event (optionally filtered by showId)
+ * Returns only ACTIVE tickets within CONFIRMED bookings.
+ * Ordered by show start time, seat row/number (General admission last), ticket ID.
+ */
+export async function getEventAttendees({ eventId, showId }) {
+  const params = [eventId];
+  let showClause = '';
+
+  if (showId) {
+    params.push(showId);
+    showClause = 'AND s.show_id = $2';
+  }
+
+  const query = `
+    SELECT 
+      t.ticket_id,
+      b.booking_id,
+      CASE 
+        WHEN u.last_name IS NOT NULL AND TRIM(u.last_name) != '' 
+        THEN u.first_name || ' ' || u.last_name 
+        ELSE u.first_name 
+      END AS attendee_name,
+      u.email,
+      u.phone,
+      u.user_type AS account_type,
+      t.attendee_type AS ticket_type,
+      s.start_time AS show_date_time,
+      v.name AS venue_name,
+      CASE 
+        WHEN t.row_label IS NOT NULL AND t.seat_no IS NOT NULL 
+        THEN t.row_label || '-' || t.seat_no 
+        ELSE 'General admission' 
+      END AS seat,
+      t.price_paid,
+      b.booked_at
+    FROM ticket t
+    JOIN booking b ON t.booking_id = b.booking_id
+    JOIN users u ON b.user_id = u.user_id
+    JOIN show s ON t.show_id = s.show_id
+    JOIN venue v ON t.venue_id = v.venue_id
+    WHERE s.event_id = $1
+      ${showClause}
+      AND t.status = 'ACTIVE'
+      AND b.status = 'CONFIRMED'
+    ORDER BY 
+      s.start_time ASC, 
+      (t.row_label IS NULL) ASC,
+      t.row_label ASC, 
+      t.seat_no ASC, 
+      t.ticket_id ASC;
+  `;
+
+  const result = await pool.query(query, params);
+  return result.rows;
+}
+
+

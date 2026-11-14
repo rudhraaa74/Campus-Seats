@@ -23,6 +23,7 @@ router.post('/venues/classroom', organizerController.createClassroomVenue);
 router.get('/events', organizerController.getEvents);
 router.post('/events', organizerController.createEvent);
 router.put('/events/:id', organizerController.updateEvent);
+router.get('/events/:eventId/attendees.csv', organizerController.exportAttendeesCsv);
 
 // Shows management
 router.get('/shows', organizerController.getShows);

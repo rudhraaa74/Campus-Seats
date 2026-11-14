@@ -128,12 +128,13 @@ SeatSync models **15 relational tables**:
 - **Endpoints:** `DELETE /api/v1/bookings/:id`, `GET /api/v1/bookings/mine`.
 
 ### Workflow 4: Organizer Show Setup & Pricing
-- **Action:** Club manager schedules a show, selects an auditorium or registers a classroom with custom capacity, sets audience restriction (`STUDENT_ONLY`, `FACULTY_ONLY`, `ALL`), and defines the price matrix.
+- **Action:** Club manager schedules a show, selects an auditorium or registers a classroom with custom capacity, sets audience restriction (`STUDENT_ONLY`, `FACULTY_ONLY`, `ALL`), defines the price matrix, and exports verified attendee rosters as RFC 4180 CSV files.
 - **DBMS Implementation:**
   1. Verifies manager club authorization (`club_manager` relation).
   2. Inserts show; GiST index detects and rejects any venue scheduling conflicts.
   3. Inserts price matrix into `show_price`; trigger verifies subsidy inequality rules.
-- **Endpoints:** `POST /api/v1/organizer/shows`, `POST /api/v1/organizer/venues/classroom`, `PUT /api/v1/organizer/shows/:id/prices`.
+  4. Exports confirmed attendee rosters (`GET /api/v1/organizer/events/:eventId/attendees.csv`) filtered to active tickets in confirmed bookings, sanitized against formula injection.
+- **Endpoints:** `POST /api/v1/organizer/shows`, `POST /api/v1/organizer/venues/classroom`, `PUT /api/v1/organizer/shows/:id/prices`, `GET /api/v1/organizer/events/:eventId/attendees.csv`.
 
 ### Workflow 5: Analytics & Reporting Dashboard
 - **Action:** Club managers view real-time occupancy and revenue breakdowns.

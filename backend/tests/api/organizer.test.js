@@ -188,15 +188,18 @@ describe('Organizer Module & Cancellation API Tests (Phase 5)', () => {
     });
 
     it('BR2: rejects show when venue is already booked for that time slot (exclusion constraint)', async () => {
-      // Show 1 in seed is scheduled in Venue 1 from 2026-11-10 18:00 to 21:00 UTC
+      const show1 = (await pool.query('SELECT start_time, end_time FROM show WHERE show_id = 1;')).rows[0];
+      const overlapStart = new Date(new Date(show1.start_time).getTime() + 3600000).toISOString();
+      const overlapEnd = new Date(new Date(show1.end_time).getTime() + 3600000).toISOString();
+
       const res = await request(app)
         .post('/api/v1/organizer/shows')
         .set('Authorization', `Bearer ${managerToken}`)
         .send({
           event_id: testEventId,
           venue_id: 1,
-          start_time: '2026-11-10T19:00:00Z', // Overlaps with Show 1!
-          end_time: '2026-11-10T22:00:00Z',
+          start_time: overlapStart,
+          end_time: overlapEnd,
         });
 
       expect(res.status).toBe(409);

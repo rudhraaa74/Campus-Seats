@@ -444,6 +444,7 @@ Every error response follows this shape:
 | `GET` | `/organizer/events` | Manager | List club events | W4 |
 | `POST` | `/organizer/events` | Manager | Create an event | W4 |
 | `PUT` | `/organizer/events/:id` | Manager | Update an event | W4 |
+| `GET` | `/organizer/events/:eventId/attendees.csv` | Manager | Export confirmed attendees list as CSV | W4 |
 | `GET` | `/organizer/shows` | Manager | List club scheduled shows | W4 |
 | `POST` | `/organizer/shows` | Manager | Schedule a show (auditorium or classroom) | W4 |
 | `POST` | `/organizer/shows/:id/cancel` | Manager | Cancel a show (cascades refunds & cancellations) | W4 |
@@ -496,6 +497,53 @@ Every error response follows this shape:
   }
 }
 ```
+
+### `GET /organizer/events/:eventId/attendees.csv`
+
+Exports the confirmed attendees list for an event as an RFC 4180-compliant CSV file with spreadsheet formula injection protection and UTF-8 BOM.
+
+- **Auth:** JWT required (`club_manager` role; manager must manage the club that owns the event — BR11).
+- **Query Parameters:**
+  - `showId` *(optional, integer)*: filter attendees to a single show belonging to this event. If `showId` does not belong to the event, returns `404 NOT_FOUND`.
+- **Rows Included:** ONLY tickets with `ticket.status = 'ACTIVE'` whose `booking.status = 'CONFIRMED'`. Excludes `HELD`, `CANCELLED`, and `EXPIRED` tickets, and tickets associated with `PENDING`, `CANCELLED`, or `EXPIRED` bookings.
+- **Columns (in order):**
+  1. `Ticket ID`: ticket primary key (`ticket.ticket_id`)
+  2. `Booking ID`: booking reference (`booking.booking_id`)
+  3. `Attendee Name`: full name (`first_name` + optional `last_name`)
+  4. `Email`: attendee email address (`users.email`)
+  5. `Phone`: attendee telephone (`users.phone` or empty cell if NULL)
+  6. `Account Type`: user account role (`users.user_type`: `STUDENT` \| `FACULTY` \| `GUEST`)
+  7. `Ticket Type`: ticket tier (`ticket.attendee_type`: `STUDENT` \| `FACULTY` \| `GUEST`)
+  8. `Show Date and Time`: show start timestamp formatted as ISO 8601 with timezone (`show.start_time`)
+  9. `Venue`: venue name (`venue.name`)
+  10. `Seat`: assigned seat (`Row-Number` e.g. `C-12`, or `"General admission"` for classrooms)
+  11. `Price Paid`: frozen ticket price with two decimals (e.g. `150.00`)
+  12. `Booked At`: booking creation timestamp formatted as ISO 8601 with timezone (`booking.booked_at`)
+- **Sorting:** Ordered by show start time (`s.start_time ASC`), seat row/number with assigned seats first and general admission last (`(t.row_label IS NULL) ASC, t.row_label ASC, t.seat_no ASC`), and ticket ID (`t.ticket_id ASC`).
+- **Formula Injection Defense:** Text cells beginning with `=`, `+`, `-`, `@`, `\t`, or `\r` are neutralized with a `'` prefix. Valid telephone numbers conforming to a strict whitelist (`^\+?[0-9\s\-()]{6,20}$`) are preserved without the prefix.
+- **Empty Event:** If no attendees exist, returns HTTP 200 with the UTF-8 BOM and header row only.
+
+**Headers:**
+- `Content-Type: text/csv; charset=utf-8`
+- `Content-Disposition: attachment; filename="attendees-<event-slug-or-id>[-show-<showId>]-<YYYY-MM-DD>.csv"`
+
+**Sample CSV Output (200 OK):**
+```csv
+Ticket ID,Booking ID,Attendee Name,Email,Phone,Account Type,Ticket Type,Show Date and Time,Venue,Seat,Price Paid,Booked At
+101,45,Jane Doe,jane@seatsync.ac.in,+91 98765 43210,STUDENT,STUDENT,2026-11-20T18:00:00.000Z,Main Auditorium,A-1,100.00,2026-11-14T05:00:00.000Z
+102,46,"Smith, John",john@seatsync.ac.in,,FACULTY,FACULTY,2026-11-20T18:00:00.000Z,Main Auditorium,B-4,150.00,2026-11-14T05:15:00.000Z
+103,47,'=Special User,guest@seatsync.ac.in,9123456780,GUEST,GUEST,2026-11-21T17:00:00.000Z,Lecture Hall 101,General admission,50.00,2026-11-14T05:30:00.000Z
+```
+
+**Errors:**
+| Code | HTTP | When |
+|---|---|---|
+| `UNAUTHORIZED` | 401 | Missing or invalid JWT authorization header |
+| `FORBIDDEN` | 403 | User is not a club manager |
+| `FORBIDDEN_CLUB_ACTION` | 403 | User is not an authorized manager of this event's club |
+| `NOT_FOUND` | 404 | Event does not exist, or `showId` does not belong to this event |
+
+---
 
 ### `GET /organizer/shows`
 

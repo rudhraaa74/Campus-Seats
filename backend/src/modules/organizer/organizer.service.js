@@ -6,6 +6,7 @@
 import { withTransaction } from '../../db/transaction.js';
 import * as queries from './organizer.queries.js';
 import { notifyShowUpdated } from '../../events/seatEvents.js';
+import { buildAttendeesCsv } from '../../utils/csv.js';
 
 /**
  * Retrieves all venues with their categories
@@ -356,3 +357,49 @@ export async function configureShowPrices(showId, prices, userClubIds) {
     })),
   };
 }
+
+/**
+ * Exports confirmed attendee list for an event (optionally filtered by showId) as CSV
+ */
+export async function exportAttendeesCsv({ eventId, showId, userClubIds }) {
+  const event = await queries.getEventById(eventId);
+  if (!event) {
+    const error = new Error('Event not found.');
+    error.status = 404;
+    error.code = 'NOT_FOUND';
+    throw error;
+  }
+
+  if (!userClubIds || !userClubIds.includes(event.club_id)) {
+    const error = new Error('You are not authorized to export attendees for this club.');
+    error.status = 403;
+    error.code = 'FORBIDDEN_CLUB_ACTION';
+    throw error;
+  }
+
+  if (showId) {
+    const show = await queries.getShowByIdAndEvent(showId, eventId);
+    if (!show) {
+      const error = new Error('Show not found for this event.');
+      error.status = 404;
+      error.code = 'NOT_FOUND';
+      throw error;
+    }
+  }
+
+  const attendees = await queries.getEventAttendees({ eventId, showId });
+  const csvContent = buildAttendeesCsv(attendees);
+
+  const eventSlug = (event.title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || String(event.event_id);
+
+  const today = new Date().toISOString().split('T')[0];
+  const filename = showId
+    ? `attendees-${eventSlug}-show-${showId}-${today}.csv`
+    : `attendees-${eventSlug}-${today}.csv`;
+
+  return { filename, csvContent };
+}
+
