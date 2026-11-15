@@ -71,11 +71,16 @@ export async function createHold({ userId, userType, showId, tickets = [], ticke
         throw error;
       }
 
-      const primaryType = (attendeeType || userType || 'STUDENT').toUpperCase();
+      // Enforce strict account-tier locking (BR14): Accounts can only book tickets of their own tier
+      const enforcedType = (userType || 'STUDENT').toUpperCase();
 
       for (const t of tickets) {
-        // Default to specified attendee_type, or request attendeeType, or user's registered type
-        const tAttendeeType = (t.attendee_type || primaryType).toUpperCase();
+        if (t.attendee_type && t.attendee_type.toUpperCase() !== enforcedType) {
+          const error = new Error(`Account tier mismatch: ${enforcedType} accounts may only book ${enforcedType} tickets.`);
+          error.status = 403;
+          error.code = 'TIER_MISMATCH';
+          throw error;
+        }
 
         await queries.createHeldTicket(client, {
           bookingId: newBooking.booking_id,
@@ -83,7 +88,7 @@ export async function createHold({ userId, userType, showId, tickets = [], ticke
           venueId: show.venue_id,
           rowLabel: t.row_label,
           seatNo: t.seat_no || t.seat_number,
-          attendeeType: tAttendeeType,
+          attendeeType: enforcedType,
         });
       }
     } else {
@@ -96,27 +101,24 @@ export async function createHold({ userId, userType, showId, tickets = [], ticke
         throw error;
       }
 
-      // Priority: explicit attendeeType -> tickets[0].attendee_type -> userType -> STUDENT
-      const defaultType = (
-        attendeeType ||
-        (tickets && tickets[0]?.attendee_type) ||
-        userType ||
-        'STUDENT'
-      ).toUpperCase();
+      // Enforce strict account-tier locking (BR14)
+      const enforcedType = (userType || 'STUDENT').toUpperCase();
+      const requestedType = attendeeType || (tickets && tickets[0]?.attendee_type);
+      if (requestedType && requestedType.toUpperCase() !== enforcedType) {
+        const error = new Error(`Account tier mismatch: ${enforcedType} accounts may only book ${enforcedType} tickets.`);
+        error.status = 403;
+        error.code = 'TIER_MISMATCH';
+        throw error;
+      }
 
       for (let i = 0; i < count; i++) {
-        const tType = (
-          (tickets && tickets[i]?.attendee_type) ||
-          defaultType
-        ).toUpperCase();
-
         await queries.createHeldTicket(client, {
           bookingId: newBooking.booking_id,
           showId,
           venueId: show.venue_id,
           rowLabel: null,
           seatNo: null,
-          attendeeType: tType,
+          attendeeType: enforcedType,
         });
       }
     }

@@ -176,6 +176,39 @@ FOR EACH ROW
 EXECUTE FUNCTION fn_ticket_price_freeze();
 
 -- =============================================================
+-- 2.1. BR14: TICKET ATTENDEE TYPE MUST MATCH BOOKING USER TYPE
+-- =============================================================
+-- A user account (Student, Faculty, Guest) can only book tickets
+-- matching their registered user_type. Club managers (who are Students
+-- or Faculty) automatically book tickets at their registered tier.
+CREATE OR REPLACE FUNCTION fn_check_ticket_attendee_type()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_user_type VARCHAR(20);
+BEGIN
+    SELECT u.user_type INTO v_user_type
+    FROM booking b
+    JOIN users u ON b.user_id = u.user_id
+    WHERE b.booking_id = NEW.booking_id;
+
+    IF v_user_type IS NOT NULL AND NEW.attendee_type <> v_user_type THEN
+        RAISE EXCEPTION 'Account tier mismatch: % accounts may only book % tickets.', v_user_type, v_user_type
+            USING ERRCODE = 'P0001';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_ticket_attendee_type_match ON ticket;
+CREATE TRIGGER trg_ticket_attendee_type_match
+BEFORE INSERT OR UPDATE ON ticket
+FOR EACH ROW
+EXECUTE FUNCTION fn_check_ticket_attendee_type();
+
+-- =============================================================
 -- 3. BR6: TICKET LIMIT (MAX 6 LIVE TICKETS PER BOOKING)
 -- =============================================================
 CREATE OR REPLACE FUNCTION fn_check_ticket_limits()

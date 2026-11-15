@@ -83,6 +83,9 @@ export function mapDatabaseError(err) {
     if (err.message.includes('capacity')) {
       errorCode = 'CAPACITY_FULL';
       status = 409;
+    } else if (err.message.toLowerCase().includes('tier mismatch') || err.message.toLowerCase().includes('account tier')) {
+      errorCode = 'TIER_MISMATCH';
+      status = 403;
     } else if (err.message.includes('6') || (err.message.toLowerCase().includes('limit') && !err.message.toLowerCase().includes('subsid'))) {
       errorCode = 'TICKET_LIMIT';
       status = 422;

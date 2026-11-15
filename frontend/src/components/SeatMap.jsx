@@ -348,18 +348,12 @@ export function SeatMap({
 
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Attendee Tier
+                Your Rate Tier
               </span>
               <div className="mt-2">
-                <select
-                  value={classroomAttendeeType}
-                  onChange={(e) => setClassroomAttendeeType(e.target.value)}
-                  className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold bg-white text-slate-800"
-                >
-                  <option value="STUDENT">Student (₹{getSeatPrice('General', 'STUDENT')})</option>
-                  <option value="FACULTY">Faculty (₹{getSeatPrice('General', 'FACULTY')})</option>
-                  <option value="GUEST">Guest (₹{getSeatPrice('General', 'GUEST')})</option>
-                </select>
+                <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider">
+                  {classroomAttendeeType} Pass (₹{getSeatPrice('General', classroomAttendeeType)} / pass)
+                </span>
               </div>
             </div>
 
@@ -819,7 +813,7 @@ export function SeatMap({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                {userRateLabel} rate applied by default. You can adjust attendee rates below.
+                {userRateLabel} rate applied (locked to your authenticated account tier).
               </p>
             </div>
 
@@ -829,7 +823,7 @@ export function SeatMap({
             </div>
           </div>
 
-          {/* Seat chips and attendee type dropdowns */}
+          {/* Seat chips and attendee type badge */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
             {selectedSeats.map((s) => {
               const price = getSeatPrice(s.category_name, s.attendee_type);
@@ -867,21 +861,12 @@ export function SeatMap({
                     </button>
                   </div>
 
-                  {/* Bottom Row: Rate Selector & Price */}
+                  {/* Bottom Row: Rate Tier Pill & Price */}
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] text-slate-400 font-medium">Rate:</span>
-                      <select
-                        value={s.attendee_type}
-                        onChange={(e) =>
-                          handleAttendeeTypeChange(s.row_label, s.seat_no, e.target.value)
-                        }
-                        className="px-2 py-0.5 rounded-md border border-slate-200 text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      >
-                        <option value="STUDENT">Student</option>
-                        <option value="FACULTY">Faculty</option>
-                        <option value="GUEST">Guest</option>
-                      </select>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
+                        {s.attendee_type} Pass
+                      </span>
                     </div>
 
                     <div className="text-right">

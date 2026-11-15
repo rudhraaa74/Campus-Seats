@@ -89,7 +89,7 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
           show_id: 1,
           tickets: [
             { row_label: 'C', seat_no: 10, attendee_type: 'STUDENT' },
-            { row_label: 'C', seat_no: 11, attendee_type: 'GUEST' },
+            { row_label: 'C', seat_no: 11, attendee_type: 'STUDENT' },
           ],
         });
 
@@ -105,6 +105,21 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
       const ttl = await redis.ttl(`hold:${createdBookingId}`);
       expect(ttl).toBeGreaterThan(0);
       expect(ttl).toBeLessThanOrEqual(300);
+    });
+
+    it('rejects attempt to book ticket with mismatched attendee tier with 403 TIER_MISMATCH', async () => {
+      const res = await request(app)
+        .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({
+          show_id: 1,
+          tickets: [
+            { row_label: 'C', seat_no: 12, attendee_type: 'GUEST' },
+          ],
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('TIER_MISMATCH');
     });
 
     it('successfully holds 3 seats for a student with student rate on all tickets', async () => {
@@ -131,7 +146,7 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
     it('successfully holds general admission tickets for a classroom show with FACULTY attendee type at faculty rate', async () => {
       const res = await request(app)
         .post('/api/v1/bookings')
-        .set('Authorization', `Bearer ${studentToken}`)
+        .set('Authorization', `Bearer ${facultyToken}`)
         .send({
           show_id: 3,
           ticket_count: 2,
@@ -154,7 +169,7 @@ describe('Bookings & Payments Module API Tests (Phase 4)', () => {
     it('successfully holds general admission tickets for GUEST when passing attendee_type without tickets array', async () => {
       const res = await request(app)
         .post('/api/v1/bookings')
-        .set('Authorization', `Bearer ${studentToken}`)
+        .set('Authorization', `Bearer ${guestToken}`)
         .send({
           show_id: 3,
           ticket_count: 1,
