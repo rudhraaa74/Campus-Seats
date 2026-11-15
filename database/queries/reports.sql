@@ -109,8 +109,8 @@ WHERE s.status = 'SCHEDULED'
   )
 ORDER BY s.start_time ASC;
 
--- 5. MOST ACTIVE ATTENDEES (GROUP BY + HAVING >= 3)
--- Identifies repeat campus attendees who have placed 3 or more bookings.
+-- 5. REPEAT ATTENDEES (GROUP BY + HAVING)
+-- Filters for frequent campus participants who have booked more than once (> 1).
 SELECT
     u.user_id,
     u.first_name,
@@ -124,7 +124,7 @@ SELECT
 FROM users u
 JOIN booking b ON u.user_id = b.user_id
 GROUP BY u.user_id, u.first_name, u.last_name, u.email, u.user_type
-HAVING COUNT(b.booking_id) >= 3
+HAVING COUNT(b.booking_id) > 1
 ORDER BY total_spent DESC, confirmed_bookings DESC;
 
 -- 6. AUDITORIUM SEAT POPULARITY BY ROW (Aggregation & Filtering)
