@@ -12,7 +12,7 @@ DBMS Course Project · Full-stack Database Application · Final Submission
 [![Postman](https://img.shields.io/badge/Postman-FF6C37?style=for-the-badge&logo=postman&logoColor=white)](https://www.postman.com/)
 
 > **Status: Complete & Production-Ready.** All 7 project phases fully implemented, tested, and verified. 
-> Includes a **1,199-record seed dataset** across 15 relations, 100% green automated test suites (65/65 Jest API & concurrency tests across 7 suites, 5/5 database constraint tests), and a live constraint enforcement demonstration.
+> Includes an **expanded enterprise seed dataset (2,844 records across 15 relations)**, 100% green automated test suites (100/100 Jest API & concurrency tests across 9 suites, 5/5 database constraint tests), and a live constraint enforcement demonstration.
 
 ---
 
@@ -26,6 +26,7 @@ DBMS Course Project · Full-stack Database Application · Final Submission
 - [Demo Credentials](#demo-credentials)
 - [Testing & Verification](#testing--verification)
 - [Live Constraint Enforcement Demo](#live-constraint-enforcement-demo)
+- [Recent Enterprise Upgrades](#recent-enterprise-upgrades)
 - [Repository Structure](#repository-structure)
 
 ---
@@ -100,16 +101,18 @@ SeatSync models **15 relational tables**:
 5. **Rule BR7 (Subsidised Pricing):** Trigger `fn_check_subsidised_pricing()` guarantees student price $\le$ faculty price $\le$ guest price.
 6. **Rule BR11 (Club Manager Scoping):** Club managers can only create and modify events/shows for clubs they explicitly administer.
 7. **Rule BR14 (Booking Window):** Shows cannot be booked once they have started or after cancellation.
-8. **Rule BR15 (Single Successful Payment):** Partial `UNIQUE` index `uq_payment_one_success` on `payment(booking_id) WHERE status = 'SUCCESS'`.
+8. **Rule BR14-Tier (Account Tier Ticket Locking):** BEFORE INSERT OR UPDATE trigger `trg_ticket_attendee_type_match` (and function `fn_check_ticket_attendee_type()`) enforcing that ticket `attendee_type` strictly matches the booking owner's account tier (`users.user_type` = `STUDENT` $\rightarrow$ `STUDENT` pass; `FACULTY` $\rightarrow$ `FACULTY` pass; `GUEST` $\rightarrow$ `GUEST` pass). Club managers carry `user_type = 'STUDENT'` and are automatically treated as students when booking tickets.
+9. **Rule BR15 (Single Successful Payment):** Partial `UNIQUE` index `uq_payment_one_success` on `payment(booking_id) WHERE status = 'SUCCESS'`.
+10. **Rule BR16 (Institutional Email Domain Enforcement):** Registration gate requiring student and faculty accounts to register with authorized campus domains (`@hyderabad.bits-pilani.ac.in`).
 
 ---
 
 ## End-to-End Workflows (W1–W5)
 
 ### Workflow 1: Registration & Authentication
-- **Action:** User registers as Student, Faculty, or Guest with role-specific attributes (roll number, employee ID, affiliation).
-- **DBMS Implementation:** Atomic transaction inserting into `users` and the corresponding specialization table (`student`, `faculty`, `guest`).
-- **Endpoints:** `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`.
+- **Action:** User registers as Student, Faculty, or Guest with role-specific attributes (roll number, employee ID, affiliation). Enforces institutional email validation and 6-digit email OTP verification.
+- **DBMS Implementation:** Atomic transaction inserting into `users` and the corresponding specialization table (`student`, `faculty`, `guest`). OTP hashes stored in Redis with 10-minute expiry; accounts marked with `verified_at = CURRENT_TIMESTAMP` upon verification.
+- **Endpoints:** `POST /api/v1/auth/register`, `POST /api/v1/auth/verify-otp`, `POST /api/v1/auth/resend-otp`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`.
 
 ### Workflow 2: Hold, Pay, Confirm (The Reservation Core)
 - **Action:** Attendee selects seats or specifies general-admission pass quantity.
@@ -137,9 +140,9 @@ SeatSync models **15 relational tables**:
 - **Endpoints:** `POST /api/v1/organizer/shows`, `POST /api/v1/organizer/venues/classroom`, `PUT /api/v1/organizer/shows/:id/prices`, `GET /api/v1/organizer/events/:eventId/attendees.csv`.
 
 ### Workflow 5: Analytics & Reporting Dashboard
-- **Action:** Club managers view real-time occupancy and revenue breakdowns.
-- **DBMS Implementation:** Non-trivial SQL queries with aggregations, `GROUP BY`, `HAVING`, and window functions leveraging views `v_show_occupancy` and `v_event_revenue`.
-- **Endpoints:** `GET /api/v1/reports/occupancy`, `GET /api/v1/reports/revenue`, `GET /api/v1/reports/top-events`.
+- **Action:** Club managers inspect multi-event performance across 6 analytical tabs: 1. Show Occupancy, 2. Revenue by Tier, 3. Top Events, 4. Shows With Seats (Unsold promotional shows), 5. Active Attendees, 6. Row Heatmap.
+- **DBMS Implementation:** Non-trivial SQL queries incorporating multi-table joins, views (`v_venue_capacity`), conditional aggregations with `FILTER`, window functions (`DENSE_RANK()`), correlated subqueries with `NOT EXISTS`, and `GROUP BY` with `HAVING`.
+- **Endpoints:** `GET /api/v1/organizer/reports/summary`, `GET /api/v1/organizer/reports/occupancy`, `GET /api/v1/organizer/reports/revenue`, `GET /api/v1/organizer/reports/top-events`, `GET /api/v1/organizer/reports/unsold-shows`, `GET /api/v1/organizer/reports/attendees`, `GET /api/v1/organizer/reports/row-utilization`.
 
 ### Real-Time Live Seat Updates (Server-Sent Events)
 - **Action:** When any attendee holds a seat, completes payment, cancels, or when background hold-expiry sweeps run, watching clients immediately see the updated availability.
@@ -253,8 +256,8 @@ Before launching the servers or presenting in the viva, verify that the database
 npm run test
 # Or: cd backend && npm test
 ```
-**Expected:** `7 passed, 7 total` suites, **`65 passed, 65 total`** tests.
-Tests auth flows, seat hold expiration, double-booking race conditions, classroom capacity concurrency locks, payment verification, and organizer reports.
+**Expected:** `9 passed, 9 total` suites, **`100 passed, 100 total`** tests.
+Tests auth flows, email OTP verification, account-tier locking, attendee CSV exports with formula defense, seat hold expiration, double-booking race conditions, classroom capacity concurrency locks, payment verification, and organizer reports.
 
 #### B. Database Rule Violation Tests (SQL)
 ```bash
@@ -302,14 +305,21 @@ All test accounts use the standard demo password: **`Password123!`**
 
 | Role | Email | Password | Privileges & Key Workflows |
 |---|---|---|---|
-| **Club Manager (Music Club)** | `manager@seatsync.ac.in` | `Password123!` | Music Club manager; creates events/shows, configures pricing, views Music Club analytics |
-| **Club Manager (Drama Society)** | `drama.head@seatsync.ac.in` | `Password123!` | Drama Society manager; views The Tempest / Standup Comedy reports and ticket revenue |
-| **Club Manager (Literary Society)** | `lit.head@seatsync.ac.in` | `Password123!` | Literary Society manager; views Debate / Poetry events and attendance reports |
-| **Club Manager (Tech Club)** | `tech.head@seatsync.ac.in` | `Password123!` | Tech & Robotics manager; organizes hackathons, manages classroom capacities |
-| **Club Manager (Sports Council)** | `sports.head@seatsync.ac.in` | `Password123!` | Sports Council manager; manages Open Air Amphitheatre matches |
-| **Student Attendee** | `student1@seatsync.ac.in` | `Password123!` | Book auditorium seats / classroom passes at student rate; see student-only events |
-| **Faculty Attendee** | `faculty@seatsync.ac.in` | `Password123!` | Book tickets at faculty rate; view booking history & cancellations |
-| **Guest Attendee** | `guest@seatsync.ac.in` | `Password123!` | General public bookings; restricted from student-only shows |
+| **Club Manager (Music Club)** | `manager@seatsync.ac.in` | `Password123!` | Admin of Music Club; organizes Rock Night / Acoustic concerts; views Music analytics |
+| **Club Manager (Drama Society)** | `manager.drama@seatsync.ac.in` | `Password123!` | Admin of Drama Society; schedules plays & stand-up comedy; views Drama analytics |
+| **Club Manager (Dance Club)** | `manager.dance@seatsync.ac.in` | `Password123!` | Admin of Dance Club (Tarang); manages dance showcases and capacity |
+| **Club Manager (Tech & Robotics)** | `manager.tech@seatsync.ac.in` | `Password123!` | Admin of Tech & Robotics; organizes hackathons, robotics challenges |
+| **Club Manager (Coding & ACM)** | `manager.coding@seatsync.ac.in` | `Password123!` | Admin of Coding Society; manages coding competitions in Lecture Halls |
+| **Club Manager (Cyber Security)** | `manager.cyber@seatsync.ac.in` | `Password123!` | Admin of Cyber Security Guild; organizes CTF tournaments |
+| **Club Manager (Campus Esports)** | `manager.esports@seatsync.ac.in` | `Password123!` | Admin of Esports Guild; organizes campus gaming leagues |
+| **Club Manager (Sports Council)** | `manager.sports@seatsync.ac.in` | `Password123!` | Admin of Sports Council; manages tournaments across campus venues |
+| **Club Manager (Literary Society)** | `manager.lit@seatsync.ac.in` | `Password123!` | Admin of Literary & Debating Society; organizes debates & poetry slams |
+| **Club Manager (CSE Council)** | `manager.cse@seatsync.ac.in` | `Password123!` | Admin of CSE Department Council; hosts academic seminars |
+| **Club Manager (Faculty Senate)** | `manager.faculty@seatsync.ac.in` | `Password123!` | Admin of Faculty Academic Senate; organizes faculty meetings & symposia |
+| **Student Attendee** | `student1@seatsync.ac.in` | `Password123!` | Rudhra Koul (`2023B3AD0445H`); books at Student rate; locked to Student Pass |
+| **Student Attendee** | `student2@seatsync.ac.in` | `Password123!` | Areesha Shahid (`2023B1A40991H`); books at Student rate |
+| **Faculty Attendee** | `faculty@seatsync.ac.in` | `Password123!` | Dr. Ramesh Sharma; books tickets at Faculty rate; locked to Faculty Pass |
+| **Guest Attendee** | `guest1@gmail.com` | `Password123!` | John Doe; external visitor bookings; locked to Guest Pass |
 
 ### Step-by-Step Verification in the Browser:
 
@@ -338,14 +348,52 @@ All test accounts use the standard demo password: **`Password123!`**
    - Submit and verify the show is scheduled.
    - Log out, log in as `guest@seatsync.ac.in`, and verify that the newly created student-only show is automatically hidden from guests.
 
-4. **Test Analytics & Reporting Dashboard:**
-   - As `manager@seatsync.ac.in`, navigate to `/dashboard`.
-   - Inspect the **Occupancy Rate**, **Gross Revenue**, **Tickets Sold**, and **Active Shows** metric cards.
-   - Filter by specific events and review the attendee tier breakdown (Student vs Faculty vs Guest) calculated by PostgreSQL views.
+4. **Test Analytics & Reporting Dashboard (6 Tabs):**
+   - As `manager@seatsync.ac.in` (or any club manager), click **"Analytics & Reports"** in the navigation bar (`/organizer/reports`).
+   - Inspect the top KPI summary cards (Gross Revenue, Active Tickets, Average Occupancy).
+   - Switch between all 6 analytical tabs:
+     1. **Show Occupancy:** Live demand vs effective venue capacity (`v_venue_capacity`).
+     2. **Revenue by Tier:** Single-pass pivot breakdown across Student, Faculty, and Guest tiers.
+     3. **Top Events:** Leaderboard ranking events using the `DENSE_RANK()` window function.
+     4. **Shows With Seats:** Upcoming shows with zero live bookings detected via correlated `NOT EXISTS` subqueries.
+     5. **Active Attendees:** Top attendees identified via `GROUP BY` and `HAVING COUNT(b.booking_id) >= 1`.
+     6. **Row Heatmap:** Physical seat row popularity and fill rate across Auditorium shows.
 
 5. **Test Cancellations & Refunds:**
    - Under **"My Bookings"** (`/my-bookings`), find a confirmed booking and click **"Cancel Booking"**.
    - Confirm cancellation: booking status changes to `CANCELLED`, tickets are freed, and refund record is created.
+
+---
+
+## Recent Enterprise Upgrades
+
+### 1. Strict Account-Tier Ticket Locking (Rule BR14-Tier)
+To prevent rate-arbitrage and abuse, ticket purchasing is strictly bound to the authenticated user's account tier:
+- **Database Trigger:** `trg_ticket_attendee_type_match` BEFORE INSERT OR UPDATE on `ticket` enforces `NEW.attendee_type = u.user_type` for the booking owner.
+- **Service Layer Defense:** `backend/src/modules/bookings/bookings.service.js` automatically defaults attendee types to the user's role and rejects cross-tier attempts with HTTP `403 TIER_MISMATCH`.
+- **Frontend SeatMap:** Auditorium seat chips and classroom general admission counters lock directly to the user's tier (e.g. `STUDENT Pass (₹100)`), removing manual tier selection dropdowns.
+- **Club Manager Policy:** Club managers carry `user_type = 'STUDENT'` in `users` with managerial roles granted via `club_manager`. When purchasing tickets from their account, they are treated as students.
+
+### 2. Full 6-Tab Interactive Reports Dashboard
+Located at `/organizer/reports` (and `database/queries/reports.sql`):
+1. **Show Occupancy:** Joins `show`, `event`, `club`, `venue`, and view `v_venue_capacity` using `COUNT(t.ticket_id) FILTER` and `NULLIF` to compute live capacity fill percentages.
+2. **Revenue by Tier:** Single-pass conditional aggregation (`SUM/COUNT ... FILTER`) pivoting Student, Faculty, and Guest ticket sales and revenue per event.
+3. **Top Events Leaderboard:** CTE `WITH event_revenue AS (...)` combined with the `DENSE_RANK() OVER (ORDER BY total_revenue DESC)` window function.
+4. **Shows With Seats (Unsold Shows):** Correlated subquery using `NOT EXISTS (SELECT 1 FROM ticket t WHERE t.show_id = s.show_id AND t.status IN ('ACTIVE', 'HELD'))` to highlight upcoming shows needing promotion.
+5. **Active Attendees:** Aggregation using `GROUP BY u.user_id ... HAVING COUNT(b.booking_id) >= 1` to track loyal campus attendees.
+6. **Row Heatmap:** Fill rate analysis across physical auditorium rows (`Row A` through `Row O`) using `COUNT(DISTINCT s.seat_no) * COUNT(DISTINCT sh.show_id)`.
+
+### 3. Confirmed Attendee Roster CSV Export (RFC 4180)
+- **Endpoint:** `GET /api/v1/organizer/events/:eventId/attendees.csv?showId=<id>`
+- Exports active confirmed tickets with show date/time, venue, seat coordinate, attendee contact info, and frozen price paid.
+- **Formula Injection Defense:** Prepends `'` to any text field starting with `=`, `+`, `-`, `@`, `\t`, or `\r` (excluding valid phone numbers) to protect club managers opening rosters in Microsoft Excel or Google Sheets.
+
+### 4. Scaled Enterprise Dataset (2,844 Records)
+Generated via `database/seed/generate_seed.js`:
+- **120 Users:** 11 Club Managers, 65 Students, 23 Faculty, 21 Guests.
+- **11 Clubs & 8 Venues:** Spanning Cultural, Technical, Sports, Esports, and Academic departments across Main Auditorium, Lecture Halls, and Open-Air spaces.
+- **36 Shows & 129 Prices:** Full pricing grids with scheduled shows and dedicated unbooked promotional shows.
+- **524 Bookings, 844 Tickets, 514 Payments:** Realistic campus booking activity across all venues.
 
 ---
 
