@@ -4,16 +4,16 @@
 // ─────────────────────────────────────────────────────────────
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api } from '../api/client.js';
+import { api, getAuthToken, setAuthToken, clearAuthToken } from '../api/client.js';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem('token'));
+  const [token, setToken] = useState(() => getAuthToken());
   const [loading, setLoading] = useState(true);
 
-  // Re-verify session on mount if token is stored in localStorage
+  // Re-verify session on mount if token is stored in sessionStorage/localStorage
   useEffect(() => {
     async function loadUser() {
       if (!token) {
@@ -37,7 +37,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const data = await api.post('/auth/login', { email, password });
-    localStorage.setItem('token', data.token);
+    setAuthToken(data.token);
     setToken(data.token);
     setUser(data.user);
     return data.user;
@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
   const register = async (formData) => {
     const data = await api.post('/auth/register', formData);
     if (data.token) {
-      localStorage.setItem('token', data.token);
+      setAuthToken(data.token);
       setToken(data.token);
     }
     if (data.user) {
@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
   const verifyOtp = async (email, otp) => {
     const data = await api.post('/auth/verify-otp', { email, otp });
     if (data.token) {
-      localStorage.setItem('token', data.token);
+      setAuthToken(data.token);
       setToken(data.token);
     }
     if (data.user) {
@@ -83,7 +83,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    clearAuthToken();
     setToken(null);
     setUser(null);
   };

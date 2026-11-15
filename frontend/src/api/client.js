@@ -5,8 +5,47 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
+/**
+ * Retrieves the authentication token with per-tab session isolation.
+ * Prefers sessionStorage so each browser tab can maintain its own authenticated user
+ * (e.g., demonstrating concurrency / double-booking race conditions between two tabs).
+ * Falls back to localStorage and clones into sessionStorage for the current tab.
+ */
+export function getAuthToken() {
+  if (typeof window === 'undefined') return null;
+  const sessionToken = sessionStorage.getItem('token');
+  if (sessionToken) return sessionToken;
+
+  const localToken = localStorage.getItem('token');
+  if (localToken) {
+    // Clone into this tab's sessionStorage to isolate it from other tabs
+    try {
+      sessionStorage.setItem('token', localToken);
+    } catch {
+      // Ignore if quota exceeded or storage disabled
+    }
+    return localToken;
+  }
+
+  return null;
+}
+
+export function setAuthToken(token) {
+  if (typeof window === 'undefined') return;
+  if (token) {
+    sessionStorage.setItem('token', token);
+    localStorage.setItem('token', token);
+  }
+}
+
+export function clearAuthToken() {
+  if (typeof window === 'undefined') return;
+  sessionStorage.removeItem('token');
+  localStorage.removeItem('token');
+}
+
 async function request(endpoint, options = {}) {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -42,7 +81,7 @@ async function request(endpoint, options = {}) {
 }
 
 async function downloadFile(endpoint, defaultFilename = 'download.csv') {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   const headers = {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
