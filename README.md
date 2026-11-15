@@ -50,11 +50,11 @@ Campus events (music concerts, cultural fests, theatre plays, hackathons, academ
 
 | Name | ID | Design Document Contribution | Implementation Responsibilities |
 |---|---|---|---|
-| **Areesha Shahid** | 2023B1A40991H | Requirements, business rules (BR1–BR15), ER diagram | **Workflow 1 (Auth & Profiles)** and **Workflow 3 (Cancellations & Refunds)**; integration tests for auth and cancellations. |
-| **Harshitha Ambavarapu** | 2023B2AD0873H | EER diagram (weak entities, `USER` specialization), relational mapping | **Workflow 4 (Organizer Setup)**; classroom dynamic venue registration; audience restriction enforcement (`allowed_attendees`). |
-| **Rudhra Koul** | 2023B3AD0445H | Relational schema, composite foreign keys, constraint design | **Workflow 2 (Hold, Pay, Confirm)**; concurrency safety, row locking (`FOR UPDATE`), Redis TTL lifecycle, Jest test suite. |
-| **Geetanjali Dangeti Sree** | 2023B4AD0609H | Design justification, application architecture, tech stack selection | **Front-End Client (React + Tailwind CSS)**; interactive seat map, checkout with live hold timer, attendee filtering. |
-| **Pranay Pratyush** | 2023B5AA1211H | Workflow design, sequence diagrams, Git repository management | **Workflow 5 (Reports & Analytics Dashboard)**; 1,200-record seed generator; live constraint demo script (`demo_constraints.sh`). |
+| **Areesha Shahid** | 2023B1A40991H | Requirements, business rules (BR1–BR15), ER diagram | **Workflow 1 (Auth & Profiles)** and **Workflow 3 (Cancellations & Refunds)**; user/subclass triggers; integration tests for auth and cancellations. |
+| **Harshitha Ambavarapu** | 2023B2AD0873H | EER diagram (weak entities, `USER` specialization), relational mapping | **Workflow 4 (Organizer Setup)**; classroom dynamic venue registration; audience restriction (`allowed_attendees`); show-overlap constraint (`ex_show_venue_overlap`). |
+| **Rudhra Koul** | 2023B3AD0445H | Relational schema, composite foreign keys, constraint design | **Workflow 2 (Hold, Pay, Confirm)**; concurrency safety, row locking (`FOR UPDATE`), partial unique index (`uq_ticket_live_seat`), Redis TTL lifecycle, `expire_holds()`. |
+| **Geetanjali Dangeti Sree** | 2023B4AD0609H | Design justification, application architecture, tech stack selection | **Front-End Client (React + Tailwind CSS)**; interactive seat map, checkout with live hold timer, attendee filtering, reports dashboard UI; Jest/UI test support. |
+| **Pranay Pratyush** | 2023B5AA1211H | Workflow design, sequence diagrams, Git repository management | **Workflow 5 (Reports & Analytics Dashboard)**: views and the 5 reporting queries; 1,200-record seed generator; live constraint demo script (`demo_constraints.sh`). |
 
 ---
 
