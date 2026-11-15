@@ -75,41 +75,29 @@ export const reportsQueries = {
     ORDER BY s.start_time ASC;
   `,
 
-  // 3. Revenue Breakdown by Event and Attendee Type (Query 2: CTE + Aggregation)
+  // 3. Revenue Breakdown by Event and Attendee Type (Query 2: Single-Pass Pivot with FILTER)
   getRevenueBreakdown: `
-    WITH ticket_breakdown AS (
-      SELECT
-        c.club_id,
-        c.name AS club_name,
-        e.event_id,
-        e.title AS event_title,
-        t.attendee_type,
-        COUNT(t.ticket_id) AS ticket_count,
-        SUM(t.price_paid) AS type_revenue
-      FROM club c
-      JOIN event e ON c.club_id = e.club_id
-      JOIN show s ON e.event_id = s.event_id
-      JOIN ticket t ON s.show_id = t.show_id
-      WHERE c.club_id = ANY($1::int[])
-        AND ($2::int IS NULL OR e.event_id = $2::int)
-        AND t.status = 'ACTIVE'
-      GROUP BY c.club_id, c.name, e.event_id, e.title, t.attendee_type
-    )
     SELECT
-      club_id,
-      club_name,
-      event_id,
-      event_title,
-      COALESCE(SUM(ticket_count) FILTER (WHERE attendee_type = 'STUDENT'), 0)::INT AS student_tickets,
-      COALESCE(SUM(type_revenue) FILTER (WHERE attendee_type = 'STUDENT'), 0.00)::NUMERIC AS student_revenue,
-      COALESCE(SUM(ticket_count) FILTER (WHERE attendee_type = 'FACULTY'), 0)::INT AS faculty_tickets,
-      COALESCE(SUM(type_revenue) FILTER (WHERE attendee_type = 'FACULTY'), 0.00)::NUMERIC AS faculty_revenue,
-      COALESCE(SUM(ticket_count) FILTER (WHERE attendee_type = 'GUEST'), 0)::INT AS guest_tickets,
-      COALESCE(SUM(type_revenue) FILTER (WHERE attendee_type = 'GUEST'), 0.00)::NUMERIC AS guest_revenue,
-      COALESCE(SUM(ticket_count), 0)::INT AS total_tickets_sold,
-      COALESCE(SUM(type_revenue), 0.00)::NUMERIC AS total_revenue
-    FROM ticket_breakdown
-    GROUP BY club_id, club_name, event_id, event_title
+      c.club_id,
+      c.name AS club_name,
+      e.event_id,
+      e.title AS event_title,
+      COUNT(t.ticket_id) FILTER (WHERE t.attendee_type = 'STUDENT')::INT AS student_tickets,
+      COALESCE(SUM(t.price_paid) FILTER (WHERE t.attendee_type = 'STUDENT'), 0.00)::NUMERIC AS student_revenue,
+      COUNT(t.ticket_id) FILTER (WHERE t.attendee_type = 'FACULTY')::INT AS faculty_tickets,
+      COALESCE(SUM(t.price_paid) FILTER (WHERE t.attendee_type = 'FACULTY'), 0.00)::NUMERIC AS faculty_revenue,
+      COUNT(t.ticket_id) FILTER (WHERE t.attendee_type = 'GUEST')::INT AS guest_tickets,
+      COALESCE(SUM(t.price_paid) FILTER (WHERE t.attendee_type = 'GUEST'), 0.00)::NUMERIC AS guest_revenue,
+      COUNT(t.ticket_id)::INT AS total_tickets_sold,
+      COALESCE(SUM(t.price_paid), 0.00)::NUMERIC AS total_revenue
+    FROM club c
+    JOIN event e ON c.club_id = e.club_id
+    JOIN show s ON e.event_id = s.event_id
+    JOIN ticket t ON s.show_id = t.show_id
+    WHERE c.club_id = ANY($1::int[])
+      AND ($2::int IS NULL OR e.event_id = $2::int)
+      AND t.status = 'ACTIVE'
+    GROUP BY c.club_id, c.name, e.event_id, e.title
     ORDER BY total_revenue DESC;
   `,
 
